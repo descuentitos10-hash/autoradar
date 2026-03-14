@@ -1051,6 +1051,37 @@ body {
 }
 .filter-toggle-text { font-weight: 500; }
 
+/* ── Oportunidades del día ── */
+.oportunidades {
+  margin-bottom: 28px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(251,191,36,0.03) 100%);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--radius);
+}
+.oportunidades-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.oportunidades-icon { font-size: 1.1rem; }
+.oportunidades-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.oportunidades-sub {
+  font-size: 0.78rem;
+  color: var(--text3);
+  margin-left: 4px;
+}
+.oportunidades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
 /* ── Alerta trigger button (results meta) ── */
 .alerta-trigger-btn {
   background: none;

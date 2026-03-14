@@ -190,6 +190,23 @@ async function loadFeatured() {
         invCountEl.style.display = "inline";
       }
       updateScrollSentinel();
+
+      // Mostrar oportunidades del día: autos con score alto y precio < 85% avg
+      const opEl = document.getElementById("oportunidades");
+      const opGrid = document.getElementById("oportunidadesGrid");
+      if (opEl && opGrid && invData.stats?.avg_usd) {
+        const avg = invData.stats.avg_usd;
+        const deals = invData.results
+          .filter(c => c.price_usd < avg * 0.82 && c.thumbnail && c.price_usd > 1000)
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, 6);
+        if (deals.length >= 3) {
+          opGrid.innerHTML = "";
+          deals.forEach(car => opGrid.appendChild(buildCarCard(car, invData.stats?.avg_usd)));
+          opEl.style.display = "block";
+        }
+      }
+
       return;
     }
   } catch { /* fallback */ }
@@ -226,6 +243,8 @@ async function doSearch() {
   state.isFeatured = false;
   setPopularChipsVisible(false);
   setHeroVisible(false);
+  const opEl = document.getElementById("oportunidades");
+  if (opEl) opEl.style.display = "none";
 
   // Actualizar URL
   const url = new URL(window.location);
@@ -627,9 +646,8 @@ function showFavoritesPage() {
   `;
 
   const grid = document.getElementById("favGrid");
-  const avgStats = { avg_usd: avg };
   state.favorites.forEach(car => {
-    grid.appendChild(buildCarCard(car, avgStats));
+    grid.appendChild(buildCarCard(car, avg));
   });
 
   document.getElementById("clearFavsBtn")?.addEventListener("click", () => {
