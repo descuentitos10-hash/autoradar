@@ -9,7 +9,8 @@ const state = {
   price_min_usd: "",
   price_max_usd: "",
   km_max: "",
-  sort: "price_asc",
+  price_drop_only: false,
+  sort: "score_desc",
   results: [],
   rendered: 0,
   stats: null,
@@ -140,6 +141,7 @@ async function loadFeatured() {
     if (state.price_min_usd) invParams.set("price_min_usd", state.price_min_usd);
     if (state.price_max_usd) invParams.set("price_max_usd", state.price_max_usd);
     if (state.km_max) invParams.set("km_max", state.km_max);
+    if (state.price_drop_only) invParams.set("price_drop_only", "1");
     const invR = await fetch(`/api/inventory?${invParams.toString()}`);
     const invData = await invR.json();
 
@@ -471,6 +473,16 @@ function buildCarCard(car, avgUsd) {
   // Share button (Web Share API o clipboard fallback)
   const shareBtnHtml = `<button class="car-share-btn" data-id="${escHtml(car.id)}" title="Compartir" aria-label="Compartir">⬆</button>`;
 
+  // Barra de precio vs mercado
+  let priceBarHtml = "";
+  if (avgUsd && car.price_usd) {
+    const ratio = car.price_usd / avgUsd;
+    const pct = Math.max(0, Math.min(100, Math.round(ratio * 50))); // 50% = avg
+    const barColor = ratio < 0.85 ? "var(--green)" : ratio > 1.2 ? "var(--red)" : "var(--accent)";
+    const barLabel = ratio < 0.85 ? `${Math.round((1-ratio)*100)}% bajo promedio` : ratio > 1.2 ? `${Math.round((ratio-1)*100)}% sobre promedio` : "Precio de mercado";
+    priceBarHtml = `<div class="price-bar-wrap" title="${barLabel}"><div class="price-bar-fill" style="width:${pct}%;background:${barColor};"></div></div>`;
+  }
+
   // Localización
   const locationHtml = car.location
     ? `<span class="car-location" title="${escHtml(car.location)}">📍 ${escHtml(car.location)}</span>`
@@ -498,6 +510,7 @@ function buildCarCard(car, avgUsd) {
         <div class="car-title">${escHtml(car.title)}</div>
       </div>
       <div class="car-price-usd">${fmtUSD(car.price_usd)}</div>
+      ${priceBarHtml}
       <div class="car-price-ars">${fmtARS(car.price_ars)}${priceDropHtml}</div>
       ${kmTagHtml ? `<div class="car-meta">${kmTagHtml}${sourceBadgeHtml}</div>` : `<div class="car-meta">${sourceBadgeHtml}</div>`}
       <div class="car-footer">
@@ -723,7 +736,8 @@ function countActiveFilters() {
   if (state.price_min_usd) count++;
   if (state.price_max_usd) count++;
   if (state.km_max) count++;
-  if (state.sort && state.sort !== "price_asc") count++;
+  if (state.price_drop_only) count++;
+  if (state.sort && state.sort !== "score_desc") count++;
   return count;
 }
 
@@ -750,7 +764,7 @@ function resetFilters() {
   state.price_min_usd = "";
   state.price_max_usd = "";
   state.km_max = "";
-  state.sort = "price_asc";
+  state.sort = "score_desc";
 
   // Sincronizar UI
   document.querySelectorAll(".condition-pill").forEach(p => {
@@ -763,7 +777,10 @@ function resetFilters() {
   document.getElementById("filterPriceMax").value = "";
   const kmEl = document.getElementById("filterKmMax");
   if (kmEl) kmEl.value = "";
-  document.getElementById("filterSort").value = "price_asc";
+  state.price_drop_only = false;
+  const pdEl = document.getElementById("filterPriceDrop");
+  if (pdEl) pdEl.checked = false;
+  document.getElementById("filterSort").value = "score_desc";
 
   updateActiveFilterCount();
   applyFilters();
@@ -815,6 +832,13 @@ document.addEventListener("DOMContentLoaded", () => {
     updateActiveFilterCount();
     clearTimeout(yearDebounce);
     yearDebounce = setTimeout(applyFilters, 600);
+  });
+
+  // Price drop only filter
+  document.getElementById("filterPriceDrop")?.addEventListener("change", e => {
+    state.price_drop_only = e.target.checked;
+    updateActiveFilterCount();
+    applyFilters();
   });
 
   // Km max filter
@@ -914,7 +938,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const yt = params.get("year_to") || "";
     const pmin = params.get("price_min_usd") || "";
     const pmax = params.get("price_max_usd") || "";
-    const sortParam = params.get("sort") || "price_asc";
+    const sortParam = params.get("sort") || "score_desc";
 
     state.condition = condParam;
     state.brand = brandParam;

@@ -133,6 +133,7 @@
     <!-- Ordenar -->
     <div class="filter-group">
       <select class="filter-select" id="filterSort" aria-label="Ordenar resultados">
+        <option value="score_desc">🔥 Mejor oferta</option>
         <option value="price_asc">Menor precio</option>
         <option value="price_desc">Mayor precio</option>
         <option value="year_desc">Más nuevo</option>
@@ -140,6 +141,14 @@
         <option value="km_asc">Menos km</option>
         <option value="km_desc">Más km</option>
       </select>
+    </div>
+
+    <!-- Toggle: solo bajadas de precio -->
+    <div class="filter-group">
+      <label class="filter-toggle-label">
+        <input type="checkbox" id="filterPriceDrop" class="filter-toggle-input" />
+        <span class="filter-toggle-text">↓ Bajó precio</span>
+      </label>
     </div>
 
     <!-- Botón reset filtros -->

@@ -733,6 +733,21 @@ body {
   background: rgba(245,158,11,0.05);
 }
 
+/* ── Price bar (precio vs mercado) ── */
+.price-bar-wrap {
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 4px 0 2px;
+}
+.price-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  min-width: 4px;
+}
+
 /* ── Share button en card ── */
 .car-share-btn {
   background: none;
@@ -1009,6 +1024,32 @@ body {
     width: 82px;
   }
 }
+
+/* ── Toggle filter (checkbox) ── */
+.filter-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.83rem;
+  color: var(--text2);
+  transition: all 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.filter-toggle-label:has(.filter-toggle-input:checked) {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(16,185,129,0.08);
+}
+.filter-toggle-input {
+  display: none;
+}
+.filter-toggle-text { font-weight: 500; }
 
 /* ── Alerta trigger button (results meta) ── */
 .alerta-trigger-btn {

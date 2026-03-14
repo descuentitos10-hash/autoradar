@@ -219,10 +219,13 @@ function applyBackendFilters(results, params) {
     return true;
   });
 
-  if (sort === "year_desc") filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
+  if (sort === "price_desc") filtered.sort((a, b) => b.price_usd - a.price_usd);
+  else if (sort === "price_asc") filtered.sort((a, b) => a.price_usd - b.price_usd);
+  else if (sort === "year_desc") filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
   else if (sort === "year_asc") filtered.sort((a, b) => (a.year || 0) - (b.year || 0));
   else if (sort === "km_asc") filtered.sort((a, b) => (a.km || 999999) - (b.km || 999999));
   else if (sort === "km_desc") filtered.sort((a, b) => (b.km || 0) - (a.km || 0));
+  // score_desc is applied after scoring below
 
   return filtered;
 }
@@ -343,7 +346,8 @@ export async function onRequestGet(context) {
     }
 
     const stats = calcStats(results);
-    const scored = results.map(r => ({ ...r, score: calcScore(r, stats.avg_usd) }));
+    let scored = results.map(r => ({ ...r, score: calcScore(r, stats.avg_usd) }));
+    if (sort === "score_desc" || !sort) scored.sort((a, b) => (b.score || 0) - (a.score || 0));
     const analysis = await analyzeWithClaude(q, stats, scored, context.env?.ANTHROPIC_API_KEY);
 
     const mlCount = [p0, p1, p2, p3].reduce((s, p) => s + (p.status === "fulfilled" ? p.value.length : 0), 0);
