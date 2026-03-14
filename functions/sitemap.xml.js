@@ -46,6 +46,7 @@ export async function onRequestGet() {
 
   const urls = [
     urlEntry("/", "daily", "1.0", today),
+    urlEntry("/autos", "weekly", "0.9", today),
     ...SEO_MODELS.map(slug => urlEntry(`/autos/${slug}`, "daily", "0.8", today)),
   ];
 

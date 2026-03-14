@@ -169,6 +169,19 @@
   <!-- MAIN CONTENT -->
   <main class="main-content" id="mainContent">
 
+    <!-- HERO BANNER (se oculta al buscar) -->
+    <div class="hero-banner" id="heroBanner">
+      <div class="hero-text">
+        <h1 class="hero-title">Encontrá el mejor precio de tu auto</h1>
+        <p class="hero-subtitle">Comparamos miles de autos en Argentina. Precios en <strong>USD al dólar blue</strong> y ARS. Autos de MercadoLibre y Kavak.</p>
+      </div>
+      <div class="hero-stats" id="heroStats" style="display:none">
+        <div class="hero-stat"><span class="hero-stat-value" id="heroTotal">—</span><span class="hero-stat-label">autos en venta</span></div>
+        <div class="hero-stat"><span class="hero-stat-value" id="heroDrops">—</span><span class="hero-stat-label">bajaron de precio</span></div>
+        <div class="hero-stat"><span class="hero-stat-value" id="heroBlue">—</span><span class="hero-stat-label">dólar blue hoy</span></div>
+      </div>
+    </div>
+
     <!-- BÚSQUEDAS POPULARES (home) -->
     <div class="popular-searches" id="popularSearches">
       <p class="popular-title">Búsquedas populares</p>
@@ -253,6 +266,7 @@
 
   <footer class="site-footer">
     <div class="footer-links">
+      <a href="/autos" style="color:var(--accent);font-weight:600;">Ver todos los modelos</a>
       <a href="/?q=Toyota+Corolla">Toyota Corolla</a>
       <a href="/?q=Ford+Ranger">Ford Ranger</a>
       <a href="/?q=Volkswagen+Amarok">VW Amarok</a>

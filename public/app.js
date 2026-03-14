@@ -120,12 +120,39 @@ function setPopularChipsVisible(v) {
   document.getElementById("popularSearches")?.classList.toggle("visible", v);
 }
 
+function setHeroVisible(v) {
+  document.getElementById("heroBanner")?.classList.toggle("visible", v);
+}
+
+async function loadHeroStats() {
+  try {
+    const [statsR, dollarEl] = await Promise.all([
+      fetch("/api/stats"),
+      Promise.resolve(document.getElementById("dollarValue")?.textContent),
+    ]);
+    const data = await statsR.json();
+    const totalEl = document.getElementById("heroTotal");
+    const dropsEl = document.getElementById("heroDrops");
+    const blueEl = document.getElementById("heroBlue");
+    const heroStats = document.getElementById("heroStats");
+
+    if (data.total && totalEl) {
+      totalEl.textContent = data.total.toLocaleString("es-AR");
+      if (dropsEl && data.price_drops) dropsEl.textContent = data.price_drops.toLocaleString("es-AR");
+      if (blueEl && dollarEl) blueEl.textContent = dollarEl;
+      if (heroStats) heroStats.style.display = "flex";
+    }
+  } catch { /* silently fail */ }
+}
+
 async function loadFeatured() {
   state.loading = true;
   state.isFeatured = true;
   state.compareList = [];
   updateCompareBar();
   setPopularChipsVisible(true);
+  setHeroVisible(true);
+  loadHeroStats();
 
   renderSkeletons(24);
   showStats(null);
@@ -198,6 +225,7 @@ async function doSearch() {
   state.loading = true;
   state.isFeatured = false;
   setPopularChipsVisible(false);
+  setHeroVisible(false);
 
   // Actualizar URL
   const url = new URL(window.location);
@@ -898,6 +926,7 @@ document.addEventListener("DOMContentLoaded", () => {
     url.search = "";
     window.history.pushState({}, "", url);
     updateSEO("");
+    setHeroVisible(true);
     loadFeatured();
   });
 

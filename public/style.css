@@ -1071,6 +1071,54 @@ body {
   color: var(--accent);
 }
 
+/* ── Hero banner (home only) ── */
+.hero-banner {
+  padding: 32px 0 12px;
+  display: none; /* shown via JS when featured */
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.hero-banner.visible { display: block; }
+.hero-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.hero-subtitle {
+  font-size: 0.95rem;
+  color: var(--text2);
+  max-width: 600px;
+}
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 0.75rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 680px) {
+  .hero-title { font-size: 1.3rem; }
+  .hero-stats { gap: 20px; }
+  .hero-stat-value { font-size: 1.2rem; }
+}
+
 /* ── Popular searches (home) ── */
 .popular-searches {
   padding: 20px 0 4px;
