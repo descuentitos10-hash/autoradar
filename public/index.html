@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoRadar — Compará precios de autos en Argentina</title>
+  <meta name="description" content="Compará precios de autos usados y 0km en Argentina. Precios en dólares y pesos con cotización blue actualizada. Análisis inteligente de mercado." />
+  <meta property="og:title" content="AutoRadar — Precios de autos en Argentina" />
+  <meta property="og:description" content="Compará precios de autos en MercadoLibre al instante. USD y ARS con dólar blue." />
+  <meta property="og:image" content="/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="/" class="logo">🎯 AutoRadar</a>
+    <div class="dollar-badge" id="dollarBadge">
+      <span class="dollar-label">Dólar blue</span>
+      <span class="dollar-value" id="dollarValue">cargando...</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <h1 class="hero-title">Compará precios de autos<br><span class="highlight">sin vueltas</span></h1>
+    <p class="hero-subtitle">Buscamos en MercadoLibre y te decimos si el precio es justo.<br>En dólares y pesos, con cotización blue en tiempo real.</p>
+
+    <form class="search-form" id="searchForm">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Ej: VW Gol Trend 2019, Toyota Corolla 2020..."
+          autocomplete="off"
+          autofocus
+        />
+        <button type="submit" class="search-btn">Buscar</button>
+      </div>
+    </form>
+
+    <div class="chips">
+      <span class="chip" data-q="Toyota Corolla 2020">Toyota Corolla 2020</span>
+      <span class="chip" data-q="VW Gol Trend 2019">VW Gol Trend 2019</span>
+      <span class="chip" data-q="Ford Ranger 2021">Ford Ranger 2021</span>
+      <span class="chip" data-q="Chevrolet Onix 2022">Chevrolet Onix 2022</span>
+      <span class="chip" data-q="Honda Civic 2018">Honda Civic 2018</span>
+      <span class="chip" data-q="Renault Sandero 2020">Renault Sandero 2020</span>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="results-section" id="resultsSection" style="display:none">
+
+    <div class="results-header">
+      <div>
+        <h2 class="results-title" id="resultsTitle"></h2>
+        <p class="results-sub" id="resultsSub"></p>
+      </div>
+      <button class="new-search-btn" id="newSearchBtn">← Nueva búsqueda</button>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat">
+        <span class="stat-label">Publicaciones</span>
+        <span class="stat-value" id="statCount">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Precio promedio</span>
+        <span class="stat-value" id="statAvg">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Mediana</span>
+        <span class="stat-value" id="statMedian">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Rango</span>
+        <span class="stat-value" id="statRange">—</span>
+      </div>
+    </div>
+
+    <!-- ANÁLISIS IA -->
+    <div class="analysis-box" id="analysisBox" style="display:none">
+      <div class="analysis-header">
+        <span class="analysis-icon">✨</span>
+        <span class="analysis-title">Análisis del mercado</span>
+        <span class="analysis-badge">Claude AI</span>
+      </div>
+      <p class="analysis-text" id="analysisText"></p>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading" id="loading" style="display:none">
+      <div class="spinner"></div>
+      <p>Buscando en MercadoLibre...</p>
+    </div>
+
+    <!-- GRID -->
+    <div class="cars-grid" id="carsGrid"></div>
+
+    <!-- NO RESULTS -->
+    <div class="no-results" id="noResults" style="display:none">
+      <p>No encontramos resultados para esta búsqueda.</p>
+      <p>Probá con otro modelo o año.</p>
+    </div>
+
+  </section>
+
+  <footer class="site-footer">
+    <p>AutoRadar busca en <a href="https://autos.mercadolibre.com.ar" target="_blank">MercadoLibre Argentina</a>. Los precios se actualizan en tiempo real.</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
