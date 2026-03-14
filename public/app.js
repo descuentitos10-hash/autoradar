@@ -9,15 +9,56 @@ const state = {
   price_min_usd: "",
   price_max_usd: "",
   sort: "price_asc",
-  results: [],        // todos los resultados recibidos
-  rendered: 0,       // cuántos ya se renderizaron (infinite scroll)
+  results: [],
+  rendered: 0,
   stats: null,
   loading: false,
   isFeatured: false,
-  hasMore: false,    // hay más resultados para cargar
-  inventoryMeta: null, // metadata del KV inventory
-  compareList: [],   // autos seleccionados para comparar (máx 3)
+  hasMore: false,
+  inventoryMeta: null,
+  compareList: [],
+  favorites: loadFavorites(), // persistidos en localStorage
 };
+
+// ── Favoritos (localStorage) ──────────────────────────────────────────────────
+
+function loadFavorites() {
+  try { return JSON.parse(localStorage.getItem("ar_favorites") || "[]"); } catch { return []; }
+}
+
+function saveFavorites() {
+  try { localStorage.setItem("ar_favorites", JSON.stringify(state.favorites)); } catch {}
+}
+
+function isFavorite(id) {
+  return state.favorites.some(f => f.id === id);
+}
+
+function toggleFavorite(car) {
+  const idx = state.favorites.findIndex(f => f.id === car.id);
+  if (idx >= 0) {
+    state.favorites.splice(idx, 1);
+  } else {
+    state.favorites.unshift({ ...car, saved_at: Date.now() });
+    if (state.favorites.length > 100) state.favorites.pop();
+  }
+  saveFavorites();
+  updateFavBadge();
+  // actualizar botones en pantalla
+  document.querySelectorAll(`.fav-btn[data-id="${CSS.escape(car.id)}"]`).forEach(btn => {
+    btn.classList.toggle("fav-active", isFavorite(car.id));
+    btn.title = isFavorite(car.id) ? "Quitar de favoritos" : "Guardar";
+  });
+}
+
+function updateFavBadge() {
+  const count = state.favorites.length;
+  const badge = document.getElementById("favBadge");
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? "flex" : "none";
+  }
+}
 
 const PAGE_SIZE = 48; // cards por carga
 
@@ -72,11 +113,16 @@ function buildApiUrl(isFeatured) {
 
 // ── Fetch de datos ────────────────────────────────────────────────────────────
 
+function setPopularChipsVisible(v) {
+  document.getElementById("popularSearches")?.classList.toggle("visible", v);
+}
+
 async function loadFeatured() {
   state.loading = true;
   state.isFeatured = true;
   state.compareList = [];
   updateCompareBar();
+  setPopularChipsVisible(true);
 
   renderSkeletons(24);
   showStats(null);
@@ -95,8 +141,15 @@ async function loadFeatured() {
       renderResults({ results: state.results.slice(0, PAGE_SIZE), stats: invData.stats });
       state.rendered = Math.min(PAGE_SIZE, state.results.length);
       state.hasMore = state.results.length > PAGE_SIZE;
-      updateResultsMeta(invData.meta?.count || invData.results.length, true);
+      const totalCount = invData.meta?.count || invData.results.length;
+      updateResultsMeta(totalCount, true);
       showStats(invData.stats);
+      // Mostrar contador en header
+      const invCountEl = document.getElementById("inventoryCount");
+      if (invCountEl && totalCount > 100) {
+        invCountEl.textContent = `${totalCount.toLocaleString("es-AR")} autos`;
+        invCountEl.style.display = "inline";
+      }
       updateScrollSentinel();
       return;
     }
@@ -132,6 +185,7 @@ async function doSearch() {
 
   state.loading = true;
   state.isFeatured = false;
+  setPopularChipsVisible(false);
 
   // Actualizar URL
   const url = new URL(window.location);
@@ -404,10 +458,17 @@ function buildCarCard(car, avgUsd) {
   // CTA según fuente
   const ctaLabel = source === "kavak" ? "Ver en Kavak →" : "Ver en ML →";
 
+  // Share button (Web Share API o clipboard fallback)
+  const shareBtnHtml = `<button class="car-share-btn" data-id="${escHtml(car.id)}" title="Compartir" aria-label="Compartir">⬆</button>`;
+
   // Localización
   const locationHtml = car.location
     ? `<span class="car-location" title="${escHtml(car.location)}">📍 ${escHtml(car.location)}</span>`
     : `<span class="car-location"></span>`;
+
+  // Botón favorito
+  const faved = isFavorite(car.id);
+  const favBtnHtml = `<button class="fav-btn${faved ? " fav-active" : ""}" data-id="${escHtml(car.id)}" title="${faved ? "Quitar de favoritos" : "Guardar"}" aria-label="Favorito">♥</button>`;
 
   // Botón comparar
   const inCompare = state.compareList.some(c => c.id === car.id);
@@ -419,6 +480,7 @@ function buildCarCard(car, avgUsd) {
       ${priceBadgeHtml}
       ${conditionBadgeHtml}
       ${compareBtnHtml}
+      ${favBtnHtml}
     </div>
     <div class="car-body">
       <div class="car-year-title">
@@ -430,16 +492,43 @@ function buildCarCard(car, avgUsd) {
       ${kmTagHtml ? `<div class="car-meta">${kmTagHtml}${sourceBadgeHtml}</div>` : `<div class="car-meta">${sourceBadgeHtml}</div>`}
       <div class="car-footer">
         ${locationHtml}
-        <span class="car-cta-btn">${ctaLabel}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${shareBtnHtml}
+          <span class="car-cta-btn">${ctaLabel}</span>
+        </div>
       </div>
     </div>
   `;
 
-  // Event: comparar (no propagar el click del link)
+  // Event: comparar
   a.querySelector(".car-compare-btn")?.addEventListener("click", e => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     toggleCompare(car);
+  });
+
+  // Event: favorito
+  a.querySelector(".fav-btn")?.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation();
+    toggleFavorite(car);
+  });
+
+  // Event: share
+  a.querySelector(".car-share-btn")?.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation();
+    const shareData = {
+      title: car.title,
+      text: `${car.title} — ${fmtUSD(car.price_usd)} en AutoRadar`,
+      url: car.permalink,
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(`${shareData.text}\n${shareData.url}`).then(() => {
+        const btn = e.currentTarget;
+        btn.textContent = "✓";
+        setTimeout(() => { btn.textContent = "⬆"; }, 1500);
+      });
+    }
   });
 
   return a;
@@ -453,6 +542,53 @@ function escHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// ── Favoritos: página modal ────────────────────────────────────────────────────
+
+function showFavoritesPage() {
+  const modal = document.getElementById("favModal");
+  if (!modal) return;
+  const body = document.getElementById("favModalBody");
+  if (!body) return;
+
+  if (!state.favorites.length) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--text2);">
+        <div style="font-size:3rem;margin-bottom:16px;">♥</div>
+        <p style="font-size:1.1rem;font-weight:600;margin-bottom:8px;">Sin favoritos guardados</p>
+        <p style="font-size:0.9rem;">Tocá el ♥ en cualquier auto para guardarlo acá.</p>
+      </div>`;
+    modal.style.display = "flex";
+    return;
+  }
+
+  const avg = state.favorites.length
+    ? Math.round(state.favorites.reduce((s, c) => s + c.price_usd, 0) / state.favorites.length)
+    : 0;
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--text2);font-size:0.9rem;">${state.favorites.length} guardado${state.favorites.length !== 1 ? "s" : ""} · Promedio ${fmtUSD(avg)}</span>
+      <button id="clearFavsBtn" style="background:none;border:1px solid var(--border);color:var(--red);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Limpiar todo</button>
+    </div>
+    <div class="cars-grid" id="favGrid"></div>
+  `;
+
+  const grid = document.getElementById("favGrid");
+  const avgStats = { avg_usd: avg };
+  state.favorites.forEach(car => {
+    grid.appendChild(buildCarCard(car, avgStats));
+  });
+
+  document.getElementById("clearFavsBtn")?.addEventListener("click", () => {
+    state.favorites = [];
+    saveFavorites();
+    updateFavBadge();
+    showFavoritesPage();
+  });
+
+  modal.style.display = "flex";
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
@@ -493,10 +629,13 @@ function updateResultsMeta(count, isFeatured, query, sources) {
   }
 
   meta.style.display = "flex";
+  const alertaBtn = document.getElementById("alertaBtn");
   if (isFeatured) {
     countEl.textContent = `${count} autos populares`;
     queryEl.textContent = "";
+    if (alertaBtn) alertaBtn.style.display = "none";
   } else {
+    if (alertaBtn) alertaBtn.style.display = count > 0 ? "inline-flex" : "none";
     countEl.textContent = `${count.toLocaleString("es-AR")} autos encontrados`;
     let queryText = query ? `para "${query}"` : "";
     if (sources && (sources.ml || sources.kavak)) {
@@ -715,6 +854,19 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFeatured();
   });
 
+  // Popular search chips (home)
+  document.getElementById("popularSearches")?.addEventListener("click", e => {
+    const chip = e.target.closest(".pop-chip");
+    if (!chip) return;
+    const q = chip.dataset.q;
+    document.getElementById("searchInput").value = q;
+    if (document.getElementById("mobileSearchInput")) {
+      document.getElementById("mobileSearchInput").value = q;
+    }
+    state.query = q;
+    doSearch();
+  });
+
   // Chips en "sin resultados"
   document.getElementById("suggestionsChips").addEventListener("click", e => {
     const chip = e.target.closest(".chip");
@@ -767,6 +919,26 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFeatured();
   }
 
+  // Mobile search bar
+  document.getElementById("mobileSearchBtn")?.addEventListener("click", () => {
+    const q = document.getElementById("mobileSearchInput")?.value.trim() || "";
+    if (q) {
+      state.query = q;
+      document.getElementById("searchInput").value = q;
+      doSearch();
+    }
+  });
+  document.getElementById("mobileSearchInput")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const q = e.target.value.trim();
+      if (q) {
+        state.query = q;
+        document.getElementById("searchInput").value = q;
+        doSearch();
+      }
+    }
+  });
+
   // Popstate (botón atrás del browser)
   window.addEventListener("popstate", () => {
     const p = new URLSearchParams(window.location.search);
@@ -797,4 +969,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Iniciar scroll observer
   initScrollObserver();
+
+  // Scroll to top
+  const scrollTopBtn = document.getElementById("scrollTopBtn");
+  window.addEventListener("scroll", () => {
+    if (scrollTopBtn) scrollTopBtn.style.display = window.scrollY > 600 ? "flex" : "none";
+  }, { passive: true });
+  scrollTopBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+  // Favoritos: badge inicial + botón para ver favoritos
+  updateFavBadge();
+  document.getElementById("favBtn")?.addEventListener("click", showFavoritesPage);
+  document.getElementById("favModalClose")?.addEventListener("click", () => {
+    document.getElementById("favModal").style.display = "none";
+  });
+  document.getElementById("favModal")?.addEventListener("click", e => {
+    if (e.target.id === "favModal") document.getElementById("favModal").style.display = "none";
+  });
+
+  // Alertas de precio
+  document.getElementById("alertaBtn")?.addEventListener("click", () => {
+    document.getElementById("alertaModal").style.display = "flex";
+  });
+  document.getElementById("alertaClose")?.addEventListener("click", () => {
+    document.getElementById("alertaModal").style.display = "none";
+  });
+  document.getElementById("alertaModal")?.addEventListener("click", e => {
+    if (e.target.id === "alertaModal") document.getElementById("alertaModal").style.display = "none";
+  });
+  document.getElementById("alertaForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const email = document.getElementById("alertaEmail")?.value;
+    const query = state.query || "autos";
+    document.getElementById("alertaForm").innerHTML = `<p style="color:var(--green);font-weight:600;">✓ Te avisamos cuando haya un ${escHtml(query)} por menos de lo que buscás.</p>`;
+    // TODO: backend para enviar email
+  });
 });
