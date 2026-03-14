@@ -133,7 +133,10 @@ async function fetchPage(query, offset, blueRate) {
   const url = `https://api.mercadolibre.com/sites/MLA/search?category=${CATEGORY}&q=${encodeURIComponent(query)}&limit=50&offset=${offset}`;
   try {
     const r = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(10000) });
-    if (!r.ok) return [];
+    if (!r.ok) {
+      if (offset === 0) console.warn(`    ⚠ ML ${r.status} for "${query}"`);
+      return [];
+    }
     const data = await r.json();
     return (data.results || []).map(item => {
       const pUSD = item.currency_id === "USD" ? item.price : Math.round(item.price / blueRate);
@@ -160,7 +163,8 @@ async function fetchPage(query, offset, blueRate) {
         source: "mercadolibre",
       };
     }).filter(c => c.price_usd > 500 && c.price_usd < 500000);
-  } catch {
+  } catch (e) {
+    if (offset === 0) console.warn(`    ⚠ ML fetch error for "${query}": ${e.message}`);
     return [];
   }
 }
@@ -258,6 +262,18 @@ async function main() {
   if (!CF_ACCOUNT_ID || !CF_KV_NAMESPACE_ID || !CF_API_TOKEN) {
     console.error("❌ Faltan variables: CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_API_TOKEN");
     process.exit(1);
+  }
+
+  // 0. Test conexión ML
+  console.log("\n0. Test conexión MercadoLibre...");
+  try {
+    const testR = await fetch("https://api.mercadolibre.com/sites/MLA/search?category=MLA1744&q=Toyota+Corolla&limit=1", {
+      headers: { "User-Agent": UA }, signal: AbortSignal.timeout(10000)
+    });
+    const testBody = await testR.text();
+    console.log(`   Status: ${testR.status} — body preview: ${testBody.slice(0, 120)}`);
+  } catch (e) {
+    console.error(`   ❌ Conexión fallida: ${e.message}`);
   }
 
   // 1. Obtener blue rate
