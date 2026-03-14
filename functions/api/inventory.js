@@ -52,6 +52,7 @@ export async function onRequestGet(context) {
   const year_to = parseInt(url.searchParams.get("year_to")) || 9999;
   const price_min_usd = parseInt(url.searchParams.get("price_min_usd")) || 0;
   const price_max_usd = parseInt(url.searchParams.get("price_max_usd")) || 999999;
+  const km_max = parseInt(url.searchParams.get("km_max")) || 0;
   const sort = url.searchParams.get("sort") || "score_desc";
   const page = parseInt(url.searchParams.get("page")) || 0;
   const limit = Math.min(parseInt(url.searchParams.get("limit")) || 50, 100);
@@ -84,6 +85,7 @@ export async function onRequestGet(context) {
       if (condition === "used" && car.condition !== "usado") return false;
       if (car.year && (car.year < year_from || car.year > year_to)) return false;
       if (car.price_usd < price_min_usd || car.price_usd > price_max_usd) return false;
+      if (km_max > 0 && car.km !== null && car.km > km_max) return false;
       return true;
     });
 

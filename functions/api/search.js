@@ -204,7 +204,7 @@ function deduplicateResults(results) {
 // ── Filtros backend ────────────────────────────────────────────────────────
 
 function applyBackendFilters(results, params) {
-  const { brand, year_from, year_to, price_min_usd, price_max_usd, sort } = params;
+  const { brand, year_from, year_to, price_min_usd, price_max_usd, km_max, sort } = params;
 
   let filtered = results.filter(r => {
     if (brand) {
@@ -215,6 +215,7 @@ function applyBackendFilters(results, params) {
       if (r.year < year_from || r.year > year_to) return false;
     }
     if (r.price_usd < price_min_usd || r.price_usd > price_max_usd) return false;
+    if (km_max > 0 && r.km !== null && r.km !== undefined && r.km > km_max) return false;
     return true;
   });
 
@@ -299,12 +300,13 @@ export async function onRequestGet(context) {
   const year_to = parseInt(url.searchParams.get("year_to")) || 9999;
   const price_min_usd = parseInt(url.searchParams.get("price_min_usd")) || 0;
   const price_max_usd = parseInt(url.searchParams.get("price_max_usd")) || 999999;
+  const km_max = parseInt(url.searchParams.get("km_max")) || 0;
   const sort = url.searchParams.get("sort") || "price_asc";
 
-  const filterParams = { condition, brand, year_from, year_to, price_min_usd, price_max_usd, sort };
+  const filterParams = { condition, brand, year_from, year_to, price_min_usd, price_max_usd, km_max, sort };
 
   const cacheKey = new Request(
-    `https://cache.autoradar.com.ar/v3/search?q=${encodeURIComponent(q.toLowerCase())}&c=${condition}&b=${encodeURIComponent(brand)}&yf=${year_from}&yt=${year_to}&pmin=${price_min_usd}&pmax=${price_max_usd}&s=${sort}`
+    `https://cache.autoradar.com.ar/v3/search?q=${encodeURIComponent(q.toLowerCase())}&c=${condition}&b=${encodeURIComponent(brand)}&yf=${year_from}&yt=${year_to}&pmin=${price_min_usd}&pmax=${price_max_usd}&km=${km_max}&s=${sort}`
   );
   const cache = caches.default;
   const cached = await cache.match(cacheKey);

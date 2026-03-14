@@ -18,31 +18,54 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 const QUERIES = [
   // Toyota
   "Toyota Corolla", "Toyota Hilux", "Toyota Etios", "Toyota Yaris", "Toyota RAV4", "Toyota SW4",
+  "Toyota Fortuner", "Toyota Prius", "Toyota Land Cruiser", "Toyota Camry",
   // Ford
-  "Ford Ranger", "Ford Focus", "Ford Fiesta", "Ford EcoSport", "Ford Kuga", "Ford S-Max",
+  "Ford Ranger", "Ford Focus", "Ford Fiesta", "Ford EcoSport", "Ford Kuga", "Ford Bronco",
+  "Ford Mustang", "Ford Territory", "Ford Explorer",
   // Volkswagen
   "Volkswagen Amarok", "Volkswagen Golf", "Volkswagen Gol Trend", "Volkswagen Polo", "Volkswagen Vento", "Volkswagen Tiguan",
+  "Volkswagen T-Cross", "Volkswagen Taos", "Volkswagen Passat",
   // Chevrolet
-  "Chevrolet Onix", "Chevrolet Cruze", "Chevrolet Tracker", "Chevrolet Spin", "Chevrolet S10", "Chevrolet Captiva",
+  "Chevrolet Onix", "Chevrolet Cruze", "Chevrolet Tracker", "Chevrolet Spin", "Chevrolet S10",
+  "Chevrolet Montana", "Chevrolet Equinox", "Chevrolet Blazer",
   // Honda
-  "Honda Civic", "Honda HR-V", "Honda Fit", "Honda CR-V", "Honda City",
+  "Honda Civic", "Honda HR-V", "Honda Fit", "Honda CR-V", "Honda City", "Honda WR-V",
+  "Honda Accord", "Honda Pilot",
   // Renault
   "Renault Duster", "Renault Sandero", "Renault Kwid", "Renault Logan", "Renault Koleos", "Renault Stepway",
+  "Renault Kangoo", "Renault Megane", "Renault Fluence",
   // Peugeot
   "Peugeot 208", "Peugeot 308", "Peugeot 3008", "Peugeot 2008", "Peugeot Partner",
+  "Peugeot 408", "Peugeot 5008",
   // Fiat
   "Fiat Cronos", "Fiat Pulse", "Fiat Toro", "Fiat Palio", "Fiat Strada",
+  "Fiat Argo", "Fiat Mobi", "Fiat 500",
   // Nissan
-  "Nissan Frontier", "Nissan Kicks", "Nissan March", "Nissan X-Trail",
+  "Nissan Frontier", "Nissan Kicks", "Nissan March", "Nissan X-Trail", "Nissan Versa",
+  "Nissan Pathfinder", "Nissan Murano",
   // Jeep
-  "Jeep Renegade", "Jeep Compass", "Jeep Grand Cherokee",
-  // Otros
-  "Hyundai Tucson", "Hyundai Creta", "Kia Sportage", "Kia Cerato",
-  "Mitsubishi L200", "Mitsubishi Outlander",
-  "BMW Serie 3", "Mercedes Clase C", "Audi A3",
-  "Citroën C3", "Suzuki Vitara",
-  // Categorías amplias
+  "Jeep Renegade", "Jeep Compass", "Jeep Grand Cherokee", "Jeep Wrangler",
+  // Mitsubishi
+  "Mitsubishi L200", "Mitsubishi Outlander", "Mitsubishi ASX", "Mitsubishi Eclipse Cross",
+  // Hyundai / Kia
+  "Hyundai Tucson", "Hyundai Creta", "Hyundai i30", "Hyundai Elantra",
+  "Kia Sportage", "Kia Cerato", "Kia Seltos", "Kia Sorento",
+  // Premium
+  "BMW Serie 3", "BMW X3", "BMW Serie 5", "BMW X5",
+  "Mercedes Clase C", "Mercedes GLA", "Mercedes CLA", "Mercedes GLC",
+  "Audi A3", "Audi A4", "Audi Q3", "Audi Q5",
+  "Volvo XC40", "Volvo XC60",
+  // Citroën / Peugeot extras
+  "Citroën C3", "Citroën C4 Cactus", "Citroën Berlingo",
+  // Suzuki / Subaru
+  "Suzuki Vitara", "Suzuki Swift", "Subaru Forester", "Subaru Impreza",
+  // DFSK / GAC / Chery (chinos, muy buscados en AR)
+  "DFSK", "GAC GS3", "Chery Tiggo", "Haval H2", "Haval H6",
+  "BYD Song", "JAC Motors",
+  // Categorías amplias (capturan long tail)
   "pickup 4x4", "SUV automática", "sedan nafta", "auto familiar económico",
+  "camioneta doble cabina", "auto 0km", "auto financiado", "auto economico nafta",
+  "SUV 7 asientos", "auto nafta manual", "auto diesel argentina",
 ];
 
 async function getBlueRate() {

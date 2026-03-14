@@ -8,6 +8,7 @@ const state = {
   year_to: "",
   price_min_usd: "",
   price_max_usd: "",
+  km_max: "",
   sort: "price_asc",
   results: [],
   rendered: 0,
@@ -107,6 +108,7 @@ function buildApiUrl(isFeatured) {
   if (state.year_to) params.set("year_to", state.year_to);
   if (state.price_min_usd) params.set("price_min_usd", state.price_min_usd);
   if (state.price_max_usd) params.set("price_max_usd", state.price_max_usd);
+  if (state.km_max) params.set("km_max", state.km_max);
   if (state.sort) params.set("sort", state.sort);
   return `/api/search?${params.toString()}`;
 }
@@ -130,7 +132,15 @@ async function loadFeatured() {
 
   try {
     // Intentar primero el inventario KV (10k autos, rápido)
-    const invR = await fetch("/api/inventory?sort=score_desc&limit=160");
+    const invParams = new URLSearchParams({ sort: "score_desc", limit: "160" });
+    if (state.condition) invParams.set("condition", state.condition === "new" ? "new" : "used");
+    if (state.brand) invParams.set("brand", state.brand);
+    if (state.year_from) invParams.set("year_from", state.year_from);
+    if (state.year_to) invParams.set("year_to", state.year_to);
+    if (state.price_min_usd) invParams.set("price_min_usd", state.price_min_usd);
+    if (state.price_max_usd) invParams.set("price_max_usd", state.price_max_usd);
+    if (state.km_max) invParams.set("km_max", state.km_max);
+    const invR = await fetch(`/api/inventory?${invParams.toString()}`);
     const invData = await invR.json();
 
     if (invData.results && invData.results.length > 0) {
@@ -712,6 +722,7 @@ function countActiveFilters() {
   if (state.year_to) count++;
   if (state.price_min_usd) count++;
   if (state.price_max_usd) count++;
+  if (state.km_max) count++;
   if (state.sort && state.sort !== "price_asc") count++;
   return count;
 }
@@ -738,6 +749,7 @@ function resetFilters() {
   state.year_to = "";
   state.price_min_usd = "";
   state.price_max_usd = "";
+  state.km_max = "";
   state.sort = "price_asc";
 
   // Sincronizar UI
@@ -749,6 +761,8 @@ function resetFilters() {
   document.getElementById("filterYearTo").value = "";
   document.getElementById("filterPriceMin").value = "";
   document.getElementById("filterPriceMax").value = "";
+  const kmEl = document.getElementById("filterKmMax");
+  if (kmEl) kmEl.value = "";
   document.getElementById("filterSort").value = "price_asc";
 
   updateActiveFilterCount();
@@ -801,6 +815,15 @@ document.addEventListener("DOMContentLoaded", () => {
     updateActiveFilterCount();
     clearTimeout(yearDebounce);
     yearDebounce = setTimeout(applyFilters, 600);
+  });
+
+  // Km max filter
+  let kmDebounce;
+  document.getElementById("filterKmMax")?.addEventListener("input", e => {
+    state.km_max = e.target.value;
+    updateActiveFilterCount();
+    clearTimeout(kmDebounce);
+    kmDebounce = setTimeout(applyFilters, 600);
   });
 
   // Price filters (con debounce)
