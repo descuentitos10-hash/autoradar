@@ -1,12 +1,13 @@
 /**
  * Cloudflare Pages Function: /api/search
- * Busca autos en MercadoLibre Argentina con análisis de precios via Claude.
+ * Busca autos en MercadoLibre Argentina con filtros y análisis de precios via Claude.
  *
- * GET /api/search?q=gol+trend+2019
+ * GET /api/search?q=corolla&condition=used&brand=Toyota&year_from=2018&year_to=2023
+ *                &price_min_usd=5000&price_max_usd=20000&sort=price_asc
  */
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-const MLA_AUTOS_CATEGORY = "MLA1744"; // Autos y Camionetas
+const MLA_AUTOS_CATEGORY = "MLA1744";
 
 function corsHeaders() {
   return {
@@ -46,9 +47,29 @@ function normalizeToARS(price, currency, blueRate) {
   return Math.round(price * blueRate);
 }
 
-async function searchMercadoLibre(query, blueRate) {
-  const url = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=48`;
-  const r = await fetch(url, {
+async function searchMercadoLibre(query, blueRate, params) {
+  const { condition, sort, price_min_usd, price_max_usd } = params;
+
+  let mlUrl = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=50`;
+
+  if (condition === "new") mlUrl += "&item_condition=new";
+  if (condition === "used") mlUrl += "&item_condition=used";
+
+  // ML soporta price_asc / price_desc nativamente
+  if (sort === "price_asc") mlUrl += "&sort=price_asc";
+  if (sort === "price_desc") mlUrl += "&sort=price_desc";
+
+  // Filtro de precio en ARS si viene precio USD
+  if (price_min_usd > 0) {
+    const arsMin = Math.round(price_min_usd * blueRate);
+    mlUrl += `&price_min=${arsMin}`;
+  }
+  if (price_max_usd < 999999) {
+    const arsMax = Math.round(price_max_usd * blueRate);
+    mlUrl += `&price_max=${arsMax}`;
+  }
+
+  const r = await fetch(mlUrl, {
     headers: { Accept: "application/json", "User-Agent": UA },
     signal: AbortSignal.timeout(8000),
   });
@@ -86,6 +107,33 @@ async function searchMercadoLibre(query, blueRate) {
   return results;
 }
 
+function applyBackendFilters(results, params) {
+  const { brand, year_from, year_to, price_min_usd, price_max_usd, sort } = params;
+
+  let filtered = results.filter(r => {
+    // Filtro marca (en backend porque ML no lo soporta confiablemente)
+    if (brand) {
+      const titleAndBrand = `${r.title} ${r.brand || ""}`.toLowerCase();
+      if (!titleAndBrand.includes(brand.toLowerCase())) return false;
+    }
+    // Filtro año
+    if (r.year) {
+      if (r.year < year_from || r.year > year_to) return false;
+    }
+    // Filtro precio USD (double-check, ML filtra por ARS aprox)
+    if (r.price_usd < price_min_usd || r.price_usd > price_max_usd) return false;
+    return true;
+  });
+
+  // Sort en backend para año y km (ML no los soporta)
+  if (sort === "year_desc") filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
+  if (sort === "year_asc") filtered.sort((a, b) => (a.year || 0) - (b.year || 0));
+  if (sort === "km_asc") filtered.sort((a, b) => (a.km || 999999) - (b.km || 999999));
+  if (sort === "km_desc") filtered.sort((a, b) => (b.km || 0) - (a.km || 0));
+
+  return filtered;
+}
+
 function calcStats(results) {
   if (!results.length) return null;
   const prices = results.map(r => r.price_usd).sort((a, b) => a - b);
@@ -106,7 +154,6 @@ function calcStats(results) {
 async function analyzeWithClaude(query, stats, results, apiKey) {
   if (!apiKey || apiKey === "your_key_here") return null;
 
-  // Top 5 listings for context
   const top5 = results.slice(0, 5).map(r =>
     `- ${r.title} | USD ${r.price_usd.toLocaleString()} | ${r.km ? r.km.toLocaleString() + " km" : "km n/d"} | ${r.year || "año n/d"} | ${r.location}`
   ).join("\n");
@@ -158,20 +205,35 @@ export async function onRequestGet(context) {
     });
   }
 
-  // Cloudflare Cache
-  const cacheKey = new Request(`https://cache.autoradar.com.ar/search?q=${encodeURIComponent(q.toLowerCase())}`);
+  // Leer todos los filtros
+  const condition = url.searchParams.get("condition") || ""; // "new", "used", ""
+  const brand = url.searchParams.get("brand") || "";
+  const year_from = parseInt(url.searchParams.get("year_from")) || 0;
+  const year_to = parseInt(url.searchParams.get("year_to")) || 9999;
+  const price_min_usd = parseInt(url.searchParams.get("price_min_usd")) || 0;
+  const price_max_usd = parseInt(url.searchParams.get("price_max_usd")) || 999999;
+  const sort = url.searchParams.get("sort") || "price_asc";
+
+  const filterParams = { condition, brand, year_from, year_to, price_min_usd, price_max_usd, sort };
+
+  // Cache key incluye todos los filtros
+  const cacheKey = new Request(
+    `https://cache.autoradar.com.ar/search?q=${encodeURIComponent(q.toLowerCase())}&c=${condition}&b=${encodeURIComponent(brand)}&yf=${year_from}&yt=${year_to}&pmin=${price_min_usd}&pmax=${price_max_usd}&s=${sort}`
+  );
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
   try {
-    const [blueRate, _] = await Promise.all([getBlueRate(), Promise.resolve()]);
-    const results = await searchMercadoLibre(q, blueRate);
+    const blueRate = await getBlueRate();
+    const rawResults = await searchMercadoLibre(q, blueRate, filterParams);
+    const results = applyBackendFilters(rawResults, filterParams);
 
     if (!results.length) {
-      return new Response(JSON.stringify({ results: [], stats: null, analysis: null, blue_rate: blueRate }), {
-        headers: corsHeaders(),
-      });
+      return new Response(
+        JSON.stringify({ results: [], stats: null, analysis: null, blue_rate: blueRate }),
+        { headers: corsHeaders() }
+      );
     }
 
     const stats = calcStats(results);
@@ -186,10 +248,10 @@ export async function onRequestGet(context) {
     return response;
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message || "Error al buscar" }), {
-      status: 500,
-      headers: corsHeaders(),
-    });
+    return new Response(
+      JSON.stringify({ error: err.message || "Error al buscar" }),
+      { status: 500, headers: corsHeaders() }
+    );
   }
 }
 

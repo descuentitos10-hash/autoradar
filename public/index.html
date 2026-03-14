@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AutoRadar — Compará precios de autos en Argentina</title>
-  <meta name="description" content="Compará precios de autos usados y 0km en Argentina. Precios en dólares y pesos con cotización blue actualizada. Análisis inteligente de mercado." />
+  <title id="pageTitle">AutoRadar — Compará precios de autos en Argentina</title>
+  <meta name="description" id="pageDesc" content="Compará precios de autos usados y 0km en Argentina. Precios en dólares y pesos con cotización blue actualizada. Análisis inteligente de mercado." />
   <meta property="og:title" content="AutoRadar — Precios de autos en Argentina" />
   <meta property="og:description" content="Compará precios de autos en MercadoLibre al instante. USD y ARS con dólar blue." />
   <meta property="og:image" content="/og-image.png" />
@@ -12,63 +12,131 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
+
+  <!-- JSON-LD Structured Data (populated by JS) -->
+  <script type="application/ld+json" id="structuredData"></script>
 </head>
 <body>
 
-  <!-- HEADER -->
+  <!-- HEADER STICKY -->
   <header class="site-header">
-    <a href="/" class="logo">🎯 AutoRadar</a>
-    <div class="dollar-badge" id="dollarBadge">
-      <span class="dollar-label">Dólar blue</span>
-      <span class="dollar-value" id="dollarValue">cargando...</span>
-    </div>
-  </header>
+    <a href="/" class="logo" id="logoLink">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4" fill="currentColor"/>
+        <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      AutoRadar
+    </a>
 
-  <!-- HERO -->
-  <section class="hero" id="hero">
-    <h1 class="hero-title">Compará precios de autos<br><span class="highlight">sin vueltas</span></h1>
-    <p class="hero-subtitle">Buscamos en MercadoLibre y te decimos si el precio es justo.<br>En dólares y pesos, con cotización blue en tiempo real.</p>
-
-    <form class="search-form" id="searchForm">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
+    <form class="header-search-form" id="searchForm">
+      <div class="header-search-box">
+        <svg class="header-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
         <input
           type="text"
           id="searchInput"
-          class="search-input"
-          placeholder="Ej: VW Gol Trend 2019, Toyota Corolla 2020..."
+          class="header-search-input"
+          placeholder="Buscar: Toyota Corolla 2020..."
           autocomplete="off"
-          autofocus
         />
-        <button type="submit" class="search-btn">Buscar</button>
+        <button type="submit" class="header-search-btn">Buscar</button>
       </div>
     </form>
 
-    <div class="chips">
-      <span class="chip" data-q="Toyota Corolla 2020">Toyota Corolla 2020</span>
-      <span class="chip" data-q="VW Gol Trend 2019">VW Gol Trend 2019</span>
-      <span class="chip" data-q="Ford Ranger 2021">Ford Ranger 2021</span>
-      <span class="chip" data-q="Chevrolet Onix 2022">Chevrolet Onix 2022</span>
-      <span class="chip" data-q="Honda Civic 2018">Honda Civic 2018</span>
-      <span class="chip" data-q="Renault Sandero 2020">Renault Sandero 2020</span>
-    </div>
-  </section>
-
-  <!-- RESULTS -->
-  <section class="results-section" id="resultsSection" style="display:none">
-
-    <div class="results-header">
-      <div>
-        <h2 class="results-title" id="resultsTitle"></h2>
-        <p class="results-sub" id="resultsSub"></p>
+    <div class="header-right">
+      <div class="dollar-badge" id="dollarBadge">
+        <span class="dollar-label">Blue</span>
+        <span class="dollar-value" id="dollarValue">...</span>
       </div>
-      <button class="new-search-btn" id="newSearchBtn">← Nueva búsqueda</button>
     </div>
+  </header>
+
+  <!-- FILTER BAR (sticky debajo del header) -->
+  <div class="filter-bar" id="filterBar">
+    <!-- Condición pills -->
+    <div class="filter-group">
+      <div class="condition-pills" id="conditionPills">
+        <button class="condition-pill active" data-value="">Todos</button>
+        <button class="condition-pill" data-value="new">0km</button>
+        <button class="condition-pill" data-value="used">Usado</button>
+      </div>
+    </div>
+
+    <!-- Marca -->
+    <div class="filter-group">
+      <select class="filter-select" id="filterBrand" aria-label="Filtrar por marca">
+        <option value="">Todas las marcas</option>
+        <option value="Toyota">Toyota</option>
+        <option value="Volkswagen">Volkswagen</option>
+        <option value="Ford">Ford</option>
+        <option value="Chevrolet">Chevrolet</option>
+        <option value="Honda">Honda</option>
+        <option value="Renault">Renault</option>
+        <option value="Peugeot">Peugeot</option>
+        <option value="Fiat">Fiat</option>
+        <option value="Nissan">Nissan</option>
+        <option value="Jeep">Jeep</option>
+        <option value="Mercedes-Benz">Mercedes-Benz</option>
+        <option value="BMW">BMW</option>
+        <option value="Audi">Audi</option>
+        <option value="Hyundai">Hyundai</option>
+        <option value="Kia">Kia</option>
+      </select>
+    </div>
+
+    <!-- Año -->
+    <div class="filter-group filter-group-inline">
+      <input type="number" class="filter-input filter-input-year" id="filterYearFrom" placeholder="Año desde" min="1990" max="2025" aria-label="Año desde" />
+      <span class="filter-sep">–</span>
+      <input type="number" class="filter-input filter-input-year" id="filterYearTo" placeholder="Año hasta" min="1990" max="2025" aria-label="Año hasta" />
+    </div>
+
+    <!-- Precio USD -->
+    <div class="filter-group filter-group-inline">
+      <input type="number" class="filter-input filter-input-price" id="filterPriceMin" placeholder="USD mín" min="0" aria-label="Precio mínimo USD" />
+      <span class="filter-sep">–</span>
+      <input type="number" class="filter-input filter-input-price" id="filterPriceMax" placeholder="USD máx" min="0" aria-label="Precio máximo USD" />
+    </div>
+
+    <!-- Ordenar -->
+    <div class="filter-group">
+      <select class="filter-select" id="filterSort" aria-label="Ordenar resultados">
+        <option value="price_asc">Menor precio</option>
+        <option value="price_desc">Mayor precio</option>
+        <option value="year_desc">Más nuevo</option>
+        <option value="year_asc">Más viejo</option>
+        <option value="km_asc">Menos km</option>
+        <option value="km_desc">Más km</option>
+      </select>
+    </div>
+
+    <!-- Botón reset filtros -->
+    <button class="filter-reset-btn" id="filterResetBtn" style="display:none" aria-label="Limpiar filtros">
+      Limpiar
+    </button>
+
+    <!-- Mobile: toggle filtros -->
+    <button class="filter-mobile-toggle" id="filterMobileToggle" aria-label="Mostrar filtros" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+      </svg>
+      Filtros
+      <span class="filter-count-badge" id="filterCountBadge" style="display:none">0</span>
+    </button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
 
     <!-- STATS BAR -->
     <div class="stats-bar" id="statsBar" style="display:none">
       <div class="stat">
-        <span class="stat-label">Publicaciones</span>
+        <span class="stat-label">Resultados</span>
         <span class="stat-value" id="statCount">—</span>
       </div>
       <div class="stat">
@@ -85,35 +153,47 @@
       </div>
     </div>
 
-    <!-- ANÁLISIS IA -->
+    <!-- ANÁLISIS IA (solo en búsquedas) -->
     <div class="analysis-box" id="analysisBox" style="display:none">
       <div class="analysis-header">
-        <span class="analysis-icon">✨</span>
+        <span class="analysis-icon" aria-hidden="true">✨</span>
         <span class="analysis-title">Análisis del mercado</span>
         <span class="analysis-badge">Claude AI</span>
       </div>
       <p class="analysis-text" id="analysisText"></p>
     </div>
 
-    <!-- LOADING -->
-    <div class="loading" id="loading" style="display:none">
-      <div class="spinner"></div>
-      <p>Buscando en MercadoLibre...</p>
+    <!-- RESULTS HEADER (contador + título) -->
+    <div class="results-meta" id="resultsMeta" style="display:none">
+      <span class="results-count" id="resultsCount"></span>
+      <span class="results-query" id="resultsQuery"></span>
     </div>
 
-    <!-- GRID -->
+    <!-- GRID (skeletons o cards reales) -->
     <div class="cars-grid" id="carsGrid"></div>
 
     <!-- NO RESULTS -->
     <div class="no-results" id="noResults" style="display:none">
-      <p>No encontramos resultados para esta búsqueda.</p>
-      <p>Probá con otro modelo o año.</p>
+      <div class="no-results-emoji" aria-hidden="true">🔍</div>
+      <h3>No encontramos resultados</h3>
+      <p>Intentá con otra búsqueda o ajustá los filtros.</p>
+      <div class="popular-suggestions">
+        <p class="suggestions-label">Búsquedas populares:</p>
+        <div class="chips" id="suggestionsChips">
+          <span class="chip" data-q="Toyota Corolla">Toyota Corolla</span>
+          <span class="chip" data-q="VW Gol Trend">VW Gol Trend</span>
+          <span class="chip" data-q="Ford Ranger">Ford Ranger</span>
+          <span class="chip" data-q="Chevrolet Onix">Chevrolet Onix</span>
+          <span class="chip" data-q="Honda Civic">Honda Civic</span>
+          <span class="chip" data-q="Peugeot 208">Peugeot 208</span>
+        </div>
+      </div>
     </div>
 
-  </section>
+  </main>
 
   <footer class="site-footer">
-    <p>AutoRadar busca en <a href="https://autos.mercadolibre.com.ar" target="_blank">MercadoLibre Argentina</a>. Los precios se actualizan en tiempo real.</p>
+    <p>AutoRadar busca en <a href="https://autos.mercadolibre.com.ar" target="_blank" rel="noopener noreferrer">MercadoLibre Argentina</a>. Precios en tiempo real con dólar blue.</p>
   </footer>
 
   <script src="/app.js"></script>
