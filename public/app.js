@@ -307,6 +307,8 @@ async function doSearch() {
   updateResultsMeta(null, false, q);
   hideAnalysis();
   hideYearBreakdown();
+  const relEl = document.getElementById("relatedModels");
+  if (relEl) relEl.style.display = "none";
 
   try {
     const r = await fetch(buildApiUrl(false));
@@ -326,6 +328,7 @@ async function doSearch() {
     showStats(data.stats);
     updateScrollSentinel();
     showYearBreakdown(allResults);
+    showRelatedModels(q);
     if (data.analysis) showAnalysis(data.analysis);
   } catch (err) {
     showFetchError("Error al conectar con el servidor.");
@@ -814,6 +817,56 @@ function showYearBreakdown(results) {
   el.style.display = "block";
 }
 
+const RELATED_MAP = {
+  "corolla": ["Toyota Etios", "Toyota Yaris", "Honda Civic", "VW Vento", "Chevrolet Cruze"],
+  "hilux": ["Ford Ranger", "VW Amarok", "Nissan Frontier", "Mitsubishi L200", "Chevrolet S10"],
+  "ranger": ["Toyota Hilux", "VW Amarok", "Nissan Frontier", "Fiat Toro", "Chevrolet S10"],
+  "amarok": ["Toyota Hilux", "Ford Ranger", "Nissan Frontier", "Mitsubishi L200"],
+  "onix": ["Fiat Cronos", "VW Gol Trend", "Renault Sandero", "Chevrolet Cruze", "Peugeot 208"],
+  "gol": ["Chevrolet Onix", "Renault Sandero", "Fiat Cronos", "Peugeot 208"],
+  "sandero": ["Renault Kwid", "VW Gol Trend", "Fiat Cronos", "Chevrolet Onix"],
+  "duster": ["Renault Koleos", "Hyundai Creta", "Peugeot 2008", "VW Tiguan", "Chevrolet Tracker"],
+  "renegade": ["Jeep Compass", "Renault Duster", "Chevrolet Tracker", "Honda HR-V"],
+  "compass": ["Jeep Renegade", "Toyota RAV4", "VW Tiguan", "Hyundai Tucson"],
+  "civic": ["Toyota Corolla", "VW Vento", "Chevrolet Cruze", "Honda City"],
+  "hr-v": ["Honda Fit", "Renault Duster", "Jeep Renegade", "Peugeot 2008"],
+  "208": ["Peugeot 308", "VW Polo", "Renault Sandero", "Fiat Cronos"],
+  "308": ["Peugeot 208", "VW Golf", "Honda Civic", "Toyota Corolla"],
+  "cruze": ["Toyota Corolla", "Honda Civic", "VW Vento", "Chevrolet Onix"],
+  "tracker": ["Jeep Renegade", "Renault Duster", "Hyundai Creta", "Honda HR-V"],
+  "tucson": ["Hyundai Creta", "Kia Sportage", "VW Tiguan", "Toyota RAV4"],
+  "sportage": ["Hyundai Tucson", "Renault Koleos", "VW Tiguan", "Jeep Compass"],
+  "golf": ["VW Polo", "Peugeot 308", "Honda Civic", "Toyota Corolla"],
+  "polo": ["VW Gol Trend", "Peugeot 208", "Fiat Cronos", "Chevrolet Onix"],
+  "etios": ["Toyota Yaris", "Toyota Corolla", "Fiat Cronos", "VW Gol Trend"],
+  "cronos": ["Fiat Argo", "VW Gol Trend", "Chevrolet Onix", "Renault Logan"],
+};
+
+function showRelatedModels(query) {
+  const el = document.getElementById("relatedModels");
+  const chips = document.getElementById("relatedChips");
+  if (!el || !chips) return;
+
+  const qLower = query.toLowerCase();
+  let related = null;
+  for (const [key, suggestions] of Object.entries(RELATED_MAP)) {
+    if (qLower.includes(key)) {
+      related = suggestions;
+      break;
+    }
+  }
+
+  if (!related) {
+    el.style.display = "none";
+    return;
+  }
+
+  chips.innerHTML = related.map(r =>
+    `<button class="pop-chip" data-q="${escHtml(r)}">${escHtml(r)}</button>`
+  ).join("");
+  el.style.display = "block";
+}
+
 function hideYearBreakdown() {
   const el = document.getElementById("yearBreakdown");
   if (el) el.style.display = "none";
@@ -1099,16 +1152,16 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFeatured();
   });
 
-  // Popular search chips (home)
-  document.getElementById("popularSearches")?.addEventListener("click", e => {
+  // Popular + related chips (delegated to main content)
+  document.getElementById("mainContent")?.addEventListener("click", e => {
     const chip = e.target.closest(".pop-chip");
     if (!chip) return;
     const q = chip.dataset.q;
     document.getElementById("searchInput").value = q;
-    if (document.getElementById("mobileSearchInput")) {
-      document.getElementById("mobileSearchInput").value = q;
-    }
+    const mobileInput = document.getElementById("mobileSearchInput");
+    if (mobileInput) mobileInput.value = q;
     state.query = q;
+    saveSearchToHistory(q);
     doSearch();
   });
 

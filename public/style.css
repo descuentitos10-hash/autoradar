@@ -1051,6 +1051,23 @@ body {
 }
 .filter-toggle-text { font-weight: 500; }
 
+/* ── Related models section ── */
+.related-models {
+  margin-top: 24px;
+  padding: 18px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.related-models-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
 /* ── Year breakdown chart ── */
 .year-breakdown {
   background: var(--bg2);
