@@ -33,7 +33,7 @@
     </a>
 
     <form class="header-search-form" id="searchForm">
-      <div class="header-search-box">
+      <div class="header-search-box" style="position:relative;">
         <svg class="header-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
@@ -43,8 +43,11 @@
           class="header-search-input"
           placeholder="Buscar: Toyota Corolla 2020..."
           autocomplete="off"
+          aria-autocomplete="list"
+          aria-controls="searchSuggestions"
         />
         <button type="submit" class="header-search-btn">Buscar</button>
+        <div class="search-suggestions" id="searchSuggestions" role="listbox" style="display:none;"></div>
       </div>
     </form>
 

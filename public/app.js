@@ -64,6 +64,47 @@ function updateFavBadge() {
 
 const PAGE_SIZE = 48; // cards por carga
 
+// ── Historial de búsquedas ────────────────────────────────────────────────────
+
+function loadSearchHistory() {
+  try { return JSON.parse(localStorage.getItem("ar_search_history") || "[]"); } catch { return []; }
+}
+
+function saveSearchToHistory(q) {
+  if (!q || q.length < 2) return;
+  try {
+    let history = loadSearchHistory();
+    history = [q, ...history.filter(h => h.toLowerCase() !== q.toLowerCase())].slice(0, 10);
+    localStorage.setItem("ar_search_history", JSON.stringify(history));
+  } catch {}
+}
+
+// Autocompletado con marcas/modelos populares
+const AUTOCOMPLETE_SUGGESTIONS = [
+  "Toyota Corolla", "Toyota Hilux", "Toyota Etios", "Toyota Yaris", "Toyota SW4", "Toyota RAV4",
+  "Ford Ranger", "Ford Focus", "Ford EcoSport", "Ford Fiesta",
+  "Volkswagen Amarok", "Volkswagen Golf", "Volkswagen Gol Trend", "Volkswagen Polo", "Volkswagen Vento",
+  "Chevrolet Onix", "Chevrolet Cruze", "Chevrolet Tracker", "Chevrolet S10",
+  "Honda Civic", "Honda HR-V", "Honda Fit", "Honda City",
+  "Renault Duster", "Renault Sandero", "Renault Kwid", "Renault Logan",
+  "Peugeot 208", "Peugeot 308", "Peugeot 3008", "Peugeot 2008",
+  "Fiat Cronos", "Fiat Pulse", "Fiat Toro", "Fiat Strada",
+  "Nissan Frontier", "Nissan Kicks", "Nissan March",
+  "Jeep Renegade", "Jeep Compass", "Jeep Grand Cherokee",
+  "Hyundai Tucson", "Hyundai Creta", "Kia Sportage", "Kia Cerato",
+  "BMW Serie 3", "Mercedes Clase C", "Audi A3", "Audi A4",
+  "Mitsubishi L200", "Mitsubishi Outlander",
+  "pickup 4x4", "SUV automática", "sedán nafta",
+];
+
+function getSuggestions(input) {
+  if (!input || input.length < 1) return [];
+  const q = input.toLowerCase();
+  return AUTOCOMPLETE_SUGGESTIONS
+    .filter(s => s.toLowerCase().includes(q))
+    .slice(0, 6);
+}
+
 // ── Helpers de formato ────────────────────────────────────────────────────────
 
 function fmtUSD(n) {
@@ -582,6 +623,18 @@ function buildCarCard(car, avgUsd) {
     toggleFavorite(car);
   });
 
+  // Track click (recently viewed)
+  a.addEventListener("click", () => {
+    try {
+      const recentRaw = localStorage.getItem("ar_recent") || "[]";
+      const recent = JSON.parse(recentRaw);
+      const entry = { id: car.id, title: car.title, price_usd: car.price_usd, thumbnail: car.thumbnail, permalink: car.permalink, viewed_at: Date.now() };
+      const filtered = recent.filter(r => r.id !== car.id);
+      filtered.unshift(entry);
+      localStorage.setItem("ar_recent", JSON.stringify(filtered.slice(0, 20)));
+    } catch {}
+  });
+
   // Event: share
   a.querySelector(".car-share-btn")?.addEventListener("click", e => {
     e.preventDefault(); e.stopPropagation();
@@ -840,9 +893,58 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(loadDollar, 5 * 60 * 1000);
 
   // Search form (header)
+  const searchInput = document.getElementById("searchInput");
+  const suggestionsBox = document.getElementById("searchSuggestions");
+
+  function showSuggestions(input) {
+    if (!suggestionsBox) return;
+    const suggestions = getSuggestions(input);
+    if (!suggestions.length || !input) {
+      suggestionsBox.style.display = "none";
+      return;
+    }
+    suggestionsBox.innerHTML = suggestions.map(s =>
+      `<div class="suggestion-item" role="option" data-q="${escHtml(s)}">
+        <span class="suggestion-icon">🔍</span>
+        <span>${escHtml(s)}</span>
+      </div>`
+    ).join("");
+    suggestionsBox.style.display = "block";
+  }
+
+  searchInput?.addEventListener("input", e => {
+    showSuggestions(e.target.value.trim());
+  });
+
+  searchInput?.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      suggestionsBox.style.display = "none";
+    }
+  });
+
+  suggestionsBox?.addEventListener("click", e => {
+    const item = e.target.closest(".suggestion-item");
+    if (!item) return;
+    const q = item.dataset.q;
+    if (searchInput) searchInput.value = q;
+    suggestionsBox.style.display = "none";
+    state.query = q;
+    saveSearchToHistory(q);
+    doSearch();
+  });
+
+  // Hide suggestions on outside click
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".header-search-box")) {
+      if (suggestionsBox) suggestionsBox.style.display = "none";
+    }
+  });
+
   document.getElementById("searchForm").addEventListener("submit", e => {
     e.preventDefault();
     const q = document.getElementById("searchInput").value.trim();
+    if (suggestionsBox) suggestionsBox.style.display = "none";
+    saveSearchToHistory(q);
     state.query = q;
     doSearch();
   });
