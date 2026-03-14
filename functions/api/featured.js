@@ -60,7 +60,7 @@ function normalizeToARS(price, currency, blueRate) {
 
 async function fetchPopularQuery(query, blueRate) {
   try {
-    const url = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=8&sort=relevance`;
+    const url = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=8`;
     const r = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": UA },
       signal: AbortSignal.timeout(8000),
