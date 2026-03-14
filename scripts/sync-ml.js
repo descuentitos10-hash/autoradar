@@ -12,7 +12,7 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID;
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
 const CATEGORY = "MLA1744";
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 // 60 queries × 4 páginas × 50 resultados = 12,000 raw → ~8,000-10,000 únicos tras dedup
 const QUERIES = [
@@ -67,6 +67,52 @@ const QUERIES = [
   "camioneta doble cabina", "auto 0km", "auto financiado", "auto economico nafta",
   "SUV 7 asientos", "auto nafta manual", "auto diesel argentina",
 ];
+
+const KAVAK_QUERIES = [
+  "Toyota Corolla", "Toyota Hilux", "Ford Ranger", "VW Amarok",
+  "Chevrolet Onix", "Honda Civic", "Renault Duster", "Peugeot 208",
+  "Fiat Cronos", "Volkswagen Golf", "Hyundai Tucson", "Kia Sportage",
+];
+
+async function fetchKavak(query, blueRate) {
+  try {
+    const url = `https://www.kavak.com/api/3.0/inventory?country_code=ar&limit=24&search=${encodeURIComponent(query)}`;
+    const r = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": UA,
+        "Referer": "https://www.kavak.com/ar/seminuevos",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    const cars = data?.data?.cars || data?.cars || data?.results || data?.data || [];
+    if (!Array.isArray(cars)) return [];
+
+    return cars.map(car => {
+      const priceUsd = car.price_usd || car.priceUSD || (car.price ? Math.round(car.price / blueRate) : 0);
+      const priceArs = car.price_ars || car.priceARS || (car.price_usd ? Math.round(car.price_usd * blueRate) : 0);
+      return {
+        id: `kavak_${car.id || car.stockId || Math.random()}`,
+        title: car.title || `${car.brand || ""} ${car.model || ""} ${car.year || ""}`.trim(),
+        price_usd: priceUsd,
+        price_ars: priceArs,
+        thumbnail: car.mainImage || car.image || car.thumbnail || "",
+        permalink: `https://www.kavak.com/ar/${(car.slug || car.id || "")}`,
+        location: car.location || car.city || "",
+        km: car.km || car.mileage || null,
+        year: car.year || null,
+        brand: car.brand || "",
+        model: car.model || "",
+        condition: "usado",
+        source: "kavak",
+      };
+    }).filter(c => c.price_usd > 500 && c.price_usd < 500000 && c.title.length > 3);
+  } catch {
+    return [];
+  }
+}
 
 async function getBlueRate() {
   try {
@@ -231,10 +277,19 @@ async function main() {
     } catch { console.log("   No hay inventario anterior."); }
   }
 
-  // 3. Fetch masivo
+  // 3. Fetch masivo ML
   console.log(`\n3. Fetching ${QUERIES.length} queries × 4 páginas = ~${QUERIES.length * 200} autos raw...`);
-  const raw = await runBatch(QUERIES, blueRate, 15);
-  console.log(`   Raw: ${raw.length} resultados`);
+  const mlRaw = await runBatch(QUERIES, blueRate, 15);
+  console.log(`   ML Raw: ${mlRaw.length} resultados`);
+
+  // 3b. Fetch Kavak (en paralelo, best-effort)
+  console.log(`\n3b. Fetching Kavak (${KAVAK_QUERIES.length} queries)...`);
+  const kavakSettled = await Promise.allSettled(KAVAK_QUERIES.map(q => fetchKavak(q, blueRate)));
+  const kavakRaw = kavakSettled.flatMap(r => r.status === "fulfilled" ? r.value : []);
+  console.log(`   Kavak Raw: ${kavakRaw.length} resultados`);
+
+  const raw = [...mlRaw, ...kavakRaw];
+  console.log(`   Total raw: ${raw.length} resultados`);
 
   // 4. Deduplicar
   const unique = deduplicate(raw);
