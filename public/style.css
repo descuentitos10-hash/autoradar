@@ -748,6 +748,28 @@ body {
   min-width: 4px;
 }
 
+/* ── Score badge ── */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.score-high {
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+  border: 1.5px solid rgba(16,185,129,0.35);
+}
+.score-med {
+  background: rgba(245,158,11,0.15);
+  color: var(--accent);
+  border: 1.5px solid rgba(245,158,11,0.35);
+}
+
 /* ── Share button en card ── */
 .car-share-btn {
   background: none;

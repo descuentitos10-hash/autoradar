@@ -581,6 +581,12 @@ function buildCarCard(car, avgUsd) {
     ? `<span class="car-location" title="${escHtml(car.location)}">📍 ${escHtml(car.location)}</span>`
     : `<span class="car-location"></span>`;
 
+  // Score badge (solo si >70)
+  const score = car.score || 0;
+  const scoreBadgeHtml = score >= 75
+    ? `<span class="score-badge score-${score >= 85 ? "high" : "med"}">${score}</span>`
+    : "";
+
   // Botón favorito
   const faved = isFavorite(car.id);
   const favBtnHtml = `<button class="fav-btn${faved ? " fav-active" : ""}" data-id="${escHtml(car.id)}" title="${faved ? "Quitar de favoritos" : "Guardar"}" aria-label="Favorito">♥</button>`;
@@ -598,6 +604,7 @@ function buildCarCard(car, avgUsd) {
       ${favBtnHtml}
     </div>
     <div class="car-body">
+      ${scoreBadgeHtml}
       <div class="car-year-title">
         ${yearHtml}
         <div class="car-title">${escHtml(car.title)}</div>
