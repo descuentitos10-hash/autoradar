@@ -927,6 +927,23 @@ body {
 .comparador-close:hover { border-color: var(--red); color: var(--red); }
 .comparador-body { overflow-x: auto; min-height: 200px; }
 
+/* ── Load more button ── */
+.load-more-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 20px;
+  padding: 10px 28px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.load-more-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ── Footer ── */
 .site-footer {
   text-align: center;

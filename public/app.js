@@ -343,8 +343,10 @@ let scrollObserver = null;
 
 function updateScrollSentinel() {
   const sentinel = document.getElementById("scrollSentinel");
-  if (!sentinel) return;
-  sentinel.style.display = state.hasMore ? "block" : "none";
+  if (sentinel) sentinel.style.display = state.hasMore ? "block" : "none";
+  // Fallback: show button if IntersectionObserver not available
+  const wrap = document.getElementById("loadMoreWrap");
+  if (wrap) wrap.style.display = (state.hasMore && !("IntersectionObserver" in window)) ? "block" : "none";
 }
 
 function loadMoreCards() {
@@ -1306,6 +1308,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Iniciar scroll observer
   initScrollObserver();
+
+  // Load more button (fallback)
+  document.getElementById("loadMoreBtn")?.addEventListener("click", loadMoreCards);
 
   // Scroll to top
   const scrollTopBtn = document.getElementById("scrollTopBtn");
