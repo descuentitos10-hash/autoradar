@@ -416,15 +416,47 @@ function openComparador() {
   const cars = state.compareList;
   if (cars.length < 2) return;
 
+  const minPrice = Math.min(...cars.map(c => c.price_usd));
+  const maxKm = Math.max(...cars.map(c => c.km || 0));
+  const maxYear = Math.max(...cars.map(c => c.year || 0));
+  const maxScore = Math.max(...cars.map(c => c.score || 0));
+
   const fields = [
-    { label: "Precio USD", fn: c => `<strong style="color:var(--accent)">${fmtUSD(c.price_usd)}</strong>` },
-    { label: "Precio ARS", fn: c => fmtARS(c.price_ars) },
-    { label: "Año", fn: c => c.year || "—" },
-    { label: "Kilómetros", fn: c => c.km ? c.km.toLocaleString("es-AR") + " km" : "—" },
-    { label: "Condición", fn: c => c.condition },
-    { label: "Ubicación", fn: c => c.location || "—" },
-    { label: "Fuente", fn: c => c.source === "kavak" ? "Kavak" : "MercadoLibre" },
-    { label: "Score", fn: c => c.score !== undefined ? `${c.score}/100` : "—" },
+    {
+      label: "Precio USD",
+      fn: c => {
+        const isMin = c.price_usd === minPrice;
+        return `<strong style="color:${isMin ? "var(--green)" : "var(--accent)"};font-size:1.05rem;">${fmtUSD(c.price_usd)}</strong>${isMin ? ' <span style="font-size:.65rem;background:rgba(16,185,129,.15);color:var(--green);border-radius:4px;padding:1px 5px;">más barato</span>' : ""}`;
+      }
+    },
+    { label: "Precio ARS", fn: c => `<span style="color:var(--text2);font-size:.88rem;">${fmtARS(c.price_ars)}</span>` },
+    {
+      label: "Año",
+      fn: c => {
+        const isMax = c.year && c.year === maxYear;
+        return c.year ? `<span style="font-weight:700;color:${isMax ? "var(--green)" : "var(--text)"};">${c.year}</span>` : "—";
+      }
+    },
+    {
+      label: "Kilómetros",
+      fn: c => {
+        const isMin = c.km !== null && c.km !== undefined && c.km <= cars.filter(x => x.km !== null).reduce((m, x) => Math.min(m, x.km), Infinity);
+        return c.km ? `<span style="color:${isMin ? "var(--green)" : "var(--text)"};">${c.km.toLocaleString("es-AR")} km</span>` : "—";
+      }
+    },
+    { label: "Condición", fn: c => `<span style="background:${c.condition==="0km"?"rgba(16,185,129,.15)":"var(--bg3)"};color:${c.condition==="0km"?"var(--green)":"var(--text2)"};border-radius:5px;padding:2px 8px;font-size:.8rem;">${c.condition}</span>` },
+    { label: "Ubicación", fn: c => `<span style="font-size:.82rem;color:var(--text2);">${c.location || "—"}</span>` },
+    { label: "Fuente", fn: c => c.source === "kavak" ? `<span style="color:#3b82f6;font-weight:600;">Kavak</span>` : `<span style="color:#f59e0b;font-weight:600;">MercadoLibre</span>` },
+    {
+      label: "Puntuación",
+      fn: c => {
+        const s = c.score || 0;
+        const isMax = s === maxScore;
+        const color = s >= 85 ? "var(--green)" : s >= 70 ? "var(--accent)" : "var(--text2)";
+        return `<span style="font-weight:700;color:${isMax ? "var(--green)" : color};font-size:1.1rem;">${s}</span><span style="font-size:.7rem;color:var(--text3);">/100</span>`;
+      }
+    },
+    { label: "Bajó precio", fn: c => c.price_drop_usd ? `<span style="color:var(--green);font-weight:600;">↓ USD ${Math.round(c.price_drop_usd).toLocaleString("es-AR")}</span>` : `<span style="color:var(--text3);">—</span>` },
   ];
 
   const colStyle = `flex:1;padding:14px;text-align:center;border-left:1px solid var(--border);`;
