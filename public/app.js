@@ -306,6 +306,7 @@ async function doSearch() {
   showStats(null);
   updateResultsMeta(null, false, q);
   hideAnalysis();
+  hideYearBreakdown();
 
   try {
     const r = await fetch(buildApiUrl(false));
@@ -324,6 +325,7 @@ async function doSearch() {
     updateResultsMeta(allResults.length, false, q, data.sources);
     showStats(data.stats);
     updateScrollSentinel();
+    showYearBreakdown(allResults);
     if (data.analysis) showAnalysis(data.analysis);
   } catch (err) {
     showFetchError("Error al conectar con el servidor.");
@@ -768,6 +770,53 @@ function updateResultsMeta(count, isFeatured, query, sources) {
     }
     queryEl.textContent = queryText;
   }
+}
+
+function showYearBreakdown(results) {
+  const el = document.getElementById("yearBreakdown");
+  const barsEl = document.getElementById("yearBreakdownBars");
+  if (!el || !barsEl) return;
+
+  // Agrupar por año
+  const byYear = {};
+  results.forEach(car => {
+    if (!car.year || car.year < 2005 || car.year > 2025) return;
+    if (!byYear[car.year]) byYear[car.year] = [];
+    byYear[car.year].push(car.price_usd);
+  });
+
+  const yearData = Object.entries(byYear)
+    .map(([year, prices]) => ({
+      year: parseInt(year),
+      avg: Math.round(prices.reduce((s, p) => s + p, 0) / prices.length),
+      count: prices.length,
+    }))
+    .filter(d => d.count >= 2)
+    .sort((a, b) => a.year - b.year);
+
+  if (yearData.length < 3) {
+    el.style.display = "none";
+    return;
+  }
+
+  const maxAvg = Math.max(...yearData.map(d => d.avg));
+  barsEl.innerHTML = yearData.map(d => {
+    const heightPct = Math.round((d.avg / maxAvg) * 100);
+    const priceK = d.avg >= 1000 ? `$${Math.round(d.avg / 1000)}k` : `$${d.avg}`;
+    return `
+      <div class="year-bar-wrap" title="${d.year}: USD ${d.avg.toLocaleString('es-AR')} (${d.count} autos)" onclick="document.getElementById('filterYearFrom').value='${d.year}';document.getElementById('filterYearTo').value='${d.year}';state.year_from='${d.year}';state.year_to='${d.year}';updateActiveFilterCount();applyFilters();">
+        <div class="year-bar" style="height:${heightPct}%;"></div>
+        <div class="year-bar-label">${d.year}</div>
+        <div class="year-bar-price">${priceK}</div>
+      </div>`;
+  }).join("");
+
+  el.style.display = "block";
+}
+
+function hideYearBreakdown() {
+  const el = document.getElementById("yearBreakdown");
+  if (el) el.style.display = "none";
 }
 
 function showFetchError(msg) {

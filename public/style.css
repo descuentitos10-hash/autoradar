@@ -1051,6 +1051,58 @@ body {
 }
 .filter-toggle-text { font-weight: 500; }
 
+/* ── Year breakdown chart ── */
+.year-breakdown {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.year-breakdown-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.year-breakdown-bars {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 60px;
+  overflow-x: auto;
+}
+.year-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 44px;
+  flex: 1;
+  cursor: pointer;
+}
+.year-bar {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  transition: background 0.15s;
+  min-height: 4px;
+}
+.year-bar-wrap:hover .year-bar { background: var(--accent2); }
+.year-bar-label {
+  font-size: 0.65rem;
+  color: var(--text3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.year-bar-price {
+  font-size: 0.6rem;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
 /* ── Search autocomplete ── */
 .search-suggestions {
   position: absolute;
