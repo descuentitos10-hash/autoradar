@@ -9,11 +9,17 @@ const state = {
   price_min_usd: "",
   price_max_usd: "",
   sort: "price_asc",
-  results: [],
+  results: [],        // todos los resultados recibidos
+  rendered: 0,       // cuántos ya se renderizaron (infinite scroll)
   stats: null,
   loading: false,
   isFeatured: false,
+  hasMore: false,    // hay más resultados para cargar
+  inventoryMeta: null, // metadata del KV inventory
+  compareList: [],   // autos seleccionados para comparar (máx 3)
 };
+
+const PAGE_SIZE = 48; // cards por carga
 
 // ── Helpers de formato ────────────────────────────────────────────────────────
 
@@ -69,23 +75,47 @@ function buildApiUrl(isFeatured) {
 async function loadFeatured() {
   state.loading = true;
   state.isFeatured = true;
+  state.compareList = [];
+  updateCompareBar();
 
   renderSkeletons(24);
   showStats(null);
   updateResultsMeta(null, true);
 
   try {
-    const r = await fetch("/api/featured");
-    const data = await r.json();
-    if (data.error) {
-      showFetchError(data.error);
+    // Intentar primero el inventario KV (10k autos, rápido)
+    const invR = await fetch("/api/inventory?sort=score_desc&limit=160");
+    const invData = await invR.json();
+
+    if (invData.results && invData.results.length > 0) {
+      state.results = invData.results;
+      state.stats = invData.stats;
+      state.inventoryMeta = invData.meta;
+      state.rendered = 0;
+      renderResults({ results: state.results.slice(0, PAGE_SIZE), stats: invData.stats });
+      state.rendered = Math.min(PAGE_SIZE, state.results.length);
+      state.hasMore = state.results.length > PAGE_SIZE;
+      updateResultsMeta(invData.meta?.count || invData.results.length, true);
+      showStats(invData.stats);
+      updateScrollSentinel();
       return;
     }
+  } catch { /* fallback */ }
+
+  // Fallback a /api/featured
+  try {
+    const r = await fetch("/api/featured");
+    const data = await r.json();
+    if (data.error) { showFetchError(data.error); return; }
     state.results = data.results || [];
     state.stats = data.stats;
-    renderResults(data);
+    state.rendered = 0;
+    renderResults({ results: state.results.slice(0, PAGE_SIZE), stats: data.stats });
+    state.rendered = Math.min(PAGE_SIZE, state.results.length);
+    state.hasMore = state.results.length > PAGE_SIZE;
     updateResultsMeta(data.results?.length || 0, true);
     showStats(data.stats);
+    updateScrollSentinel();
   } catch (err) {
     showFetchError("Error al cargar el feed.");
   } finally {
@@ -130,19 +160,138 @@ async function doSearch() {
       showFetchError(data.error);
       return;
     }
-    state.results = data.results || [];
+    const allResults = data.results || [];
+    state.results = allResults;
     state.stats = data.stats;
-    renderResults(data);
-    updateResultsMeta(data.results?.length || 0, false, q, data.sources);
+    state.rendered = 0;
+    renderResults({ results: allResults.slice(0, PAGE_SIZE), stats: data.stats });
+    state.rendered = Math.min(PAGE_SIZE, allResults.length);
+    state.hasMore = allResults.length > PAGE_SIZE;
+    updateResultsMeta(allResults.length, false, q, data.sources);
     showStats(data.stats);
-    if (data.analysis) {
-      showAnalysis(data.analysis);
-    }
+    updateScrollSentinel();
+    if (data.analysis) showAnalysis(data.analysis);
   } catch (err) {
     showFetchError("Error al conectar con el servidor.");
   } finally {
     state.loading = false;
   }
+}
+
+// ── Infinite scroll ───────────────────────────────────────────────────────────
+
+let scrollObserver = null;
+
+function updateScrollSentinel() {
+  const sentinel = document.getElementById("scrollSentinel");
+  if (!sentinel) return;
+  sentinel.style.display = state.hasMore ? "block" : "none";
+}
+
+function loadMoreCards() {
+  if (state.loading || !state.hasMore) return;
+  const next = state.results.slice(state.rendered, state.rendered + PAGE_SIZE);
+  if (!next.length) { state.hasMore = false; updateScrollSentinel(); return; }
+
+  const grid = document.getElementById("carsGrid");
+  next.forEach(car => {
+    const card = buildCarCard(car, state.stats?.avg_usd);
+    grid.appendChild(card);
+  });
+  state.rendered += next.length;
+  state.hasMore = state.rendered < state.results.length;
+  updateScrollSentinel();
+}
+
+function initScrollObserver() {
+  if (scrollObserver) scrollObserver.disconnect();
+  const sentinel = document.getElementById("scrollSentinel");
+  if (!sentinel) return;
+  scrollObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) loadMoreCards();
+  }, { rootMargin: "400px" });
+  scrollObserver.observe(sentinel);
+}
+
+// ── Comparador ────────────────────────────────────────────────────────────────
+
+function toggleCompare(car) {
+  const idx = state.compareList.findIndex(c => c.id === car.id);
+  if (idx >= 0) {
+    state.compareList.splice(idx, 1);
+  } else {
+    if (state.compareList.length >= 3) {
+      state.compareList.shift(); // remove oldest
+    }
+    state.compareList.push(car);
+  }
+  updateCompareBar();
+  // Re-render compare buttons en cards visibles
+  document.querySelectorAll(".car-compare-btn").forEach(btn => {
+    const id = btn.dataset.id;
+    const inList = state.compareList.some(c => c.id === id);
+    btn.classList.toggle("compare-active", inList);
+    btn.title = inList ? "Quitar del comparador" : "Agregar al comparador";
+  });
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById("compareBar");
+  const count = state.compareList.length;
+  if (!bar) return;
+  if (count < 2) {
+    bar.style.display = "none";
+    return;
+  }
+  bar.style.display = "flex";
+  document.getElementById("compareCount").textContent = count;
+  const thumbs = document.getElementById("compareThumbs");
+  thumbs.innerHTML = state.compareList.map(c =>
+    c.thumbnail
+      ? `<img src="${escHtml(c.thumbnail)}" alt="${escHtml(c.title)}" class="compare-thumb">`
+      : `<div class="compare-thumb compare-thumb-placeholder">🚗</div>`
+  ).join("");
+}
+
+function openComparador() {
+  const cars = state.compareList;
+  if (cars.length < 2) return;
+
+  const fields = [
+    { label: "Precio USD", fn: c => `<strong style="color:var(--accent)">${fmtUSD(c.price_usd)}</strong>` },
+    { label: "Precio ARS", fn: c => fmtARS(c.price_ars) },
+    { label: "Año", fn: c => c.year || "—" },
+    { label: "Kilómetros", fn: c => c.km ? c.km.toLocaleString("es-AR") + " km" : "—" },
+    { label: "Condición", fn: c => c.condition },
+    { label: "Ubicación", fn: c => c.location || "—" },
+    { label: "Fuente", fn: c => c.source === "kavak" ? "Kavak" : "MercadoLibre" },
+    { label: "Score", fn: c => c.score !== undefined ? `${c.score}/100` : "—" },
+  ];
+
+  const colStyle = `flex:1;padding:14px;text-align:center;border-left:1px solid var(--border);`;
+  const headerRow = `<div style="display:flex;border-bottom:1px solid var(--border);">
+    <div style="width:120px;padding:14px;font-size:.8rem;color:var(--text3);font-weight:600;flex-shrink:0;"></div>
+    ${cars.map(c => `<div style="${colStyle}">
+      ${c.thumbnail ? `<img src="${escHtml(c.thumbnail)}" style="width:100%;height:100px;object-fit:cover;border-radius:8px;margin-bottom:8px;">` : `<div style="width:100%;height:100px;background:var(--bg3);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🚗</div>`}
+      <div style="font-size:.83rem;font-weight:600;color:var(--text);line-height:1.3;">${escHtml(c.title)}</div>
+    </div>`).join("")}
+  </div>`;
+
+  const rows = fields.map(field => `
+    <div style="display:flex;border-bottom:1px solid var(--border);">
+      <div style="width:120px;padding:12px 14px;font-size:.78rem;color:var(--text2);flex-shrink:0;display:flex;align-items:center;">${field.label}</div>
+      ${cars.map(c => `<div style="${colStyle}font-size:.88rem;color:var(--text);display:flex;align-items:center;justify-content:center;">${field.fn(c)}</div>`).join("")}
+    </div>`).join("");
+
+  const links = `<div style="display:flex;border-top:1px solid var(--border);">
+    <div style="width:120px;flex-shrink:0;"></div>
+    ${cars.map(c => `<div style="${colStyle}"><a href="${escHtml(c.permalink)}" target="_blank" rel="noopener" style="display:inline-block;background:var(--accent);color:#000;border-radius:8px;padding:8px 16px;font-weight:700;font-size:.83rem;text-decoration:none;">Ver anuncio →</a></div>`).join("")}
+  </div>`;
+
+  const modal = document.getElementById("comparadorModal");
+  const body = document.getElementById("comparadorBody");
+  body.innerHTML = headerRow + rows + links;
+  modal.style.display = "flex";
 }
 
 // ── Re-ejecutar según estado actual ──────────────────────────────────────────
@@ -151,7 +300,6 @@ function applyFilters() {
   if (state.query.trim()) {
     doSearch();
   } else {
-    // Featured no soporta filtros — los ignoramos silenciosamente
     loadFeatured();
   }
 }
@@ -189,7 +337,6 @@ function renderResults(data) {
   }
 
   document.getElementById("noResults").style.display = "none";
-
   const avgUsd = stats?.avg_usd;
 
   grid.innerHTML = "";
@@ -220,6 +367,12 @@ function buildCarCard(car, avgUsd) {
       priceBadgeHtml = `<span class="car-badge badge-caro">Caro</span>`;
     }
   }
+
+  // Badge bajada de precio
+  const priceDrop = car.price_drop_usd;
+  const priceDropHtml = priceDrop
+    ? `<span class="price-drop-badge">↓ USD ${Math.round(priceDrop).toLocaleString("es-AR")} menos</span>`
+    : "";
 
   // Badge condición
   const conditionBadgeHtml = isNew
@@ -256,11 +409,16 @@ function buildCarCard(car, avgUsd) {
     ? `<span class="car-location" title="${escHtml(car.location)}">📍 ${escHtml(car.location)}</span>`
     : `<span class="car-location"></span>`;
 
+  // Botón comparar
+  const inCompare = state.compareList.some(c => c.id === car.id);
+  const compareBtnHtml = `<button class="car-compare-btn${inCompare ? " compare-active" : ""}" data-id="${escHtml(car.id)}" title="${inCompare ? "Quitar del comparador" : "Agregar al comparador"}" aria-label="Comparar">⊕</button>`;
+
   a.innerHTML = `
     <div class="car-image-wrap">
       ${imgHtml}
       ${priceBadgeHtml}
       ${conditionBadgeHtml}
+      ${compareBtnHtml}
     </div>
     <div class="car-body">
       <div class="car-year-title">
@@ -268,7 +426,7 @@ function buildCarCard(car, avgUsd) {
         <div class="car-title">${escHtml(car.title)}</div>
       </div>
       <div class="car-price-usd">${fmtUSD(car.price_usd)}</div>
-      <div class="car-price-ars">${fmtARS(car.price_ars)}</div>
+      <div class="car-price-ars">${fmtARS(car.price_ars)}${priceDropHtml}</div>
       ${kmTagHtml ? `<div class="car-meta">${kmTagHtml}${sourceBadgeHtml}</div>` : `<div class="car-meta">${sourceBadgeHtml}</div>`}
       <div class="car-footer">
         ${locationHtml}
@@ -276,6 +434,13 @@ function buildCarCard(car, avgUsd) {
       </div>
     </div>
   `;
+
+  // Event: comparar (no propagar el click del link)
+  a.querySelector(".car-compare-btn")?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCompare(car);
+  });
 
   return a;
 }
@@ -610,4 +775,26 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("searchInput").value = q;
     if (q) doSearch(); else loadFeatured();
   });
+
+  // Comparador bar
+  document.getElementById("compareBtnAction")?.addEventListener("click", openComparador);
+  document.getElementById("compareClear")?.addEventListener("click", () => {
+    state.compareList = [];
+    updateCompareBar();
+    document.querySelectorAll(".car-compare-btn").forEach(btn => {
+      btn.classList.remove("compare-active");
+    });
+  });
+
+  // Modal comparador
+  const modal = document.getElementById("comparadorModal");
+  document.getElementById("comparadorClose")?.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+  modal?.addEventListener("click", e => {
+    if (e.target === modal) modal.style.display = "none";
+  });
+
+  // Iniciar scroll observer
+  initScrollObserver();
 });

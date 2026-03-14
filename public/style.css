@@ -733,6 +733,126 @@ body {
   background: rgba(245,158,11,0.05);
 }
 
+/* ── Badge bajada de precio ── */
+.price-drop-badge {
+  display: inline-block;
+  background: rgba(16,185,129,0.15);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* ── Botón comparar en card ── */
+.car-compare-btn {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.6);
+  color: rgba(255,255,255,0.7);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  backdrop-filter: blur(4px);
+  padding: 0;
+  line-height: 1;
+}
+.car-compare-btn:hover,
+.car-compare-btn.compare-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+
+/* ── Barra comparador fija ── */
+.compare-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(17,17,17,0.97);
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 200;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+}
+.compare-bar-thumbs { display: flex; gap: 6px; }
+.compare-thumb {
+  width: 44px; height: 44px;
+  border-radius: 8px; object-fit: cover;
+  border: 2px solid var(--accent);
+}
+.compare-thumb-placeholder {
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  border: 2px solid var(--accent);
+}
+.compare-bar-label { font-size: 0.88rem; color: var(--text2); flex: 1; }
+.compare-bar-btn {
+  background: var(--accent); color: #000;
+  border: none; border-radius: 8px;
+  padding: 10px 20px; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.compare-bar-btn:hover { background: var(--accent2); }
+.compare-bar-clear {
+  background: transparent;
+  border: 1px solid var(--border); color: var(--text3);
+  border-radius: 50%; width: 32px; height: 32px;
+  cursor: pointer; font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.compare-bar-clear:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Modal Comparador ── */
+.comparador-modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 300;
+  align-items: center; justify-content: center;
+  padding: 16px; overflow-y: auto;
+}
+.comparador-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%; max-width: 960px;
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+}
+.comparador-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg2); z-index: 1;
+}
+.comparador-title { font-size: 1.1rem; font-weight: 700; }
+.comparador-close {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); border-radius: 50%;
+  width: 32px; height: 32px; cursor: pointer; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.comparador-close:hover { border-color: var(--red); color: var(--red); }
+.comparador-body { overflow-x: auto; min-height: 200px; }
+
 /* ── Footer ── */
 .site-footer {
   text-align: center;

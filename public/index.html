@@ -172,6 +172,9 @@
     <!-- GRID (skeletons o cards reales) -->
     <div class="cars-grid" id="carsGrid"></div>
 
+    <!-- INFINITE SCROLL SENTINEL -->
+    <div id="scrollSentinel" style="display:none;height:1px;margin:20px 0;"></div>
+
     <!-- NO RESULTS -->
     <div class="no-results" id="noResults" style="display:none">
       <div class="no-results-emoji" aria-hidden="true">🔍</div>
@@ -195,6 +198,25 @@
   <footer class="site-footer">
     <p>AutoRadar busca en <a href="https://autos.mercadolibre.com.ar" target="_blank" rel="noopener noreferrer">MercadoLibre Argentina</a>. Precios en tiempo real con dólar blue.</p>
   </footer>
+
+  <!-- BARRA DE COMPARADOR (aparece al seleccionar 2+ autos) -->
+  <div class="compare-bar" id="compareBar" style="display:none">
+    <div class="compare-bar-thumbs" id="compareThumbs"></div>
+    <span class="compare-bar-label"><strong id="compareCount">0</strong> autos seleccionados</span>
+    <button class="compare-bar-btn" id="compareBtnAction">Comparar →</button>
+    <button class="compare-bar-clear" id="compareClear" aria-label="Limpiar selección">✕</button>
+  </div>
+
+  <!-- MODAL COMPARADOR -->
+  <div class="comparador-modal" id="comparadorModal" style="display:none" role="dialog" aria-modal="true" aria-label="Comparador de autos">
+    <div class="comparador-content">
+      <div class="comparador-header">
+        <h2 class="comparador-title">Comparar autos</h2>
+        <button class="comparador-close" id="comparadorClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="comparador-body" id="comparadorBody"></div>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
 </body>
