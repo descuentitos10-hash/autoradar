@@ -133,7 +133,7 @@ async function doSearch() {
     state.results = data.results || [];
     state.stats = data.stats;
     renderResults(data);
-    updateResultsMeta(data.results?.length || 0, false, q);
+    updateResultsMeta(data.results?.length || 0, false, q, data.sources);
     showStats(data.stats);
     if (data.analysis) {
       showAnalysis(data.analysis);
@@ -209,10 +209,12 @@ function buildCarCard(car, avgUsd) {
   const km = fmtKm(car.km);
   const isNew = car.condition === "0km";
 
-  // Badge precio
+  // Badge precio vs mercado
   let priceBadgeHtml = "";
   if (avgUsd && car.price_usd) {
-    if (car.price_usd < avgUsd * 0.9) {
+    if (car.price_usd < avgUsd * 0.85) {
+      priceBadgeHtml = `<span class="car-badge badge-oferta">🔥 Oferta</span>`;
+    } else if (car.price_usd < avgUsd * 0.92) {
       priceBadgeHtml = `<span class="car-badge badge-justo">Precio justo</span>`;
     } else if (car.price_usd > avgUsd * 1.2) {
       priceBadgeHtml = `<span class="car-badge badge-caro">Caro</span>`;
@@ -223,6 +225,12 @@ function buildCarCard(car, avgUsd) {
   const conditionBadgeHtml = isNew
     ? `<span class="badge-condition badge-new">0km</span>`
     : `<span class="badge-condition badge-used">Usado</span>`;
+
+  // Badge fuente
+  const source = car.source || "mercadolibre";
+  const sourceBadgeHtml = source === "kavak"
+    ? `<span class="source-badge source-kavak">Kavak</span>`
+    : `<span class="source-badge source-ml">ML</span>`;
 
   // Imagen
   const imgHtml = car.thumbnail
@@ -239,6 +247,9 @@ function buildCarCard(car, avgUsd) {
   const kmTagHtml = km && !isNew
     ? `<span class="car-tag">${km}</span>`
     : "";
+
+  // CTA según fuente
+  const ctaLabel = source === "kavak" ? "Ver en Kavak →" : "Ver en ML →";
 
   // Localización
   const locationHtml = car.location
@@ -258,10 +269,10 @@ function buildCarCard(car, avgUsd) {
       </div>
       <div class="car-price-usd">${fmtUSD(car.price_usd)}</div>
       <div class="car-price-ars">${fmtARS(car.price_ars)}</div>
-      ${kmTagHtml ? `<div class="car-meta">${kmTagHtml}</div>` : ""}
+      ${kmTagHtml ? `<div class="car-meta">${kmTagHtml}${sourceBadgeHtml}</div>` : `<div class="car-meta">${sourceBadgeHtml}</div>`}
       <div class="car-footer">
         ${locationHtml}
-        <span class="car-cta-btn">Ver en ML →</span>
+        <span class="car-cta-btn">${ctaLabel}</span>
       </div>
     </div>
   `;
@@ -304,13 +315,12 @@ function hideAnalysis() {
   document.getElementById("analysisBox").style.display = "none";
 }
 
-function updateResultsMeta(count, isFeatured, query) {
+function updateResultsMeta(count, isFeatured, query, sources) {
   const meta = document.getElementById("resultsMeta");
   const countEl = document.getElementById("resultsCount");
   const queryEl = document.getElementById("resultsQuery");
 
   if (count === null) {
-    // Loading
     countEl.textContent = "Buscando...";
     queryEl.textContent = "";
     meta.style.display = "flex";
@@ -323,7 +333,14 @@ function updateResultsMeta(count, isFeatured, query) {
     queryEl.textContent = "";
   } else {
     countEl.textContent = `${count.toLocaleString("es-AR")} autos encontrados`;
-    queryEl.textContent = query ? `para "${query}"` : "";
+    let queryText = query ? `para "${query}"` : "";
+    if (sources && (sources.ml || sources.kavak)) {
+      const parts = [];
+      if (sources.ml) parts.push(`${sources.ml} en ML`);
+      if (sources.kavak) parts.push(`${sources.kavak} en Kavak`);
+      queryText += (queryText ? " — " : "") + parts.join(" · ");
+    }
+    queryEl.textContent = queryText;
   }
 }
 

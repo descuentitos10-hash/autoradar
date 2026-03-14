@@ -1,24 +1,38 @@
 /**
  * Cloudflare Pages Function: /api/featured
- * Devuelve ~48 autos populares para el feed por defecto.
- * Hace queries en paralelo por modelos populares, sin análisis Claude.
+ * Feed por defecto: 20 modelos populares en paralelo (~160 autos).
+ * Sin análisis Claude para reducir latencia y costo.
  */
 
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 const MLA_AUTOS_CATEGORY = "MLA1744";
+const CURRENT_YEAR = 2025;
 
+// 20 modelos más buscados en Argentina
 const POPULAR_QUERIES = [
   "Toyota Corolla",
-  "VW Gol Trend",
   "Ford Ranger",
+  "Volkswagen Amarok",
   "Chevrolet Onix",
+  "Toyota Hilux",
+  "VW Gol Trend",
   "Honda Civic",
-  "Renault Sandero",
+  "Renault Duster",
   "Peugeot 208",
   "Fiat Cronos",
+  "Volkswagen Golf",
+  "Ford Focus",
+  "Chevrolet Cruze",
+  "Renault Sandero",
+  "Toyota Etios",
+  "Nissan Frontier",
+  "Jeep Renegade",
+  "Honda HR-V",
+  "Volkswagen Vento",
+  "Hyundai Tucson",
 ];
 
-const RESULTS_PER_QUERY = 6;
+const RESULTS_PER_QUERY = 8;
 
 function corsHeaders() {
   return {
@@ -60,7 +74,7 @@ function normalizeToARS(price, currency, blueRate) {
 
 async function fetchPopularQuery(query, blueRate) {
   try {
-    const url = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=8`;
+    const url = `https://api.mercadolibre.com/sites/MLA/search?category=${MLA_AUTOS_CATEGORY}&q=${encodeURIComponent(query)}&limit=${RESULTS_PER_QUERY}`;
     const r = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": UA },
       signal: AbortSignal.timeout(8000),
@@ -79,7 +93,7 @@ async function fetchPopularQuery(query, blueRate) {
         const model = extractAttribute(item.attributes, "MODEL");
 
         return {
-          id: item.id,
+          id: `ml_${item.id}`,
           title: item.title,
           price_usd: usd,
           price_ars: ars,
@@ -95,6 +109,7 @@ async function fetchPopularQuery(query, blueRate) {
           brand,
           model,
           condition: item.condition === "new" ? "0km" : "usado",
+          source: "mercadolibre",
           _query: query,
         };
       })
@@ -104,6 +119,32 @@ async function fetchPopularQuery(query, blueRate) {
   }
 }
 
+function calcScore(car, avgUsd) {
+  let score = 50;
+  if (avgUsd && car.price_usd) {
+    const ratio = car.price_usd / avgUsd;
+    if (ratio < 0.75) score += 35;
+    else if (ratio < 0.85) score += 25;
+    else if (ratio < 0.92) score += 15;
+    else if (ratio > 1.3) score -= 25;
+    else if (ratio > 1.2) score -= 15;
+  }
+  if (car.year) {
+    const age = CURRENT_YEAR - car.year;
+    if (age <= 3) score += 15;
+    else if (age <= 5) score += 10;
+    else if (age <= 8) score += 5;
+    else if (age > 15) score -= 10;
+  }
+  if (car.km !== null && car.km !== undefined) {
+    if (car.km < 30000) score += 15;
+    else if (car.km < 80000) score += 8;
+    else if (car.km > 150000) score -= 15;
+  }
+  if (car.thumbnail) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
 function calcStats(results) {
   if (!results.length) return null;
   const prices = results.map(r => r.price_usd).sort((a, b) => a - b);
@@ -111,7 +152,6 @@ function calcStats(results) {
   const median = prices.length % 2 === 0
     ? Math.round((prices[prices.length / 2 - 1] + prices[prices.length / 2]) / 2)
     : prices[Math.floor(prices.length / 2)];
-
   return {
     count: results.length,
     avg_usd: avg,
@@ -122,8 +162,7 @@ function calcStats(results) {
 }
 
 export async function onRequestGet(context) {
-  // Cloudflare Cache
-  const cacheKey = new Request("https://cache.autoradar.com.ar/featured-v1");
+  const cacheKey = new Request("https://cache.autoradar.com.ar/featured-v3");
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
@@ -131,30 +170,33 @@ export async function onRequestGet(context) {
   try {
     const blueRate = await getBlueRate();
 
-    // Fetch todos los modelos en paralelo
-    const batches = await Promise.all(
+    // 20 queries en paralelo
+    const batches = await Promise.allSettled(
       POPULAR_QUERIES.map(q => fetchPopularQuery(q, blueRate))
     );
 
-    // Mezclar resultados y deduplicar por id
+    // Mezclar intercalando: 1 de cada modelo → mejor diversidad en el feed
     const seen = new Set();
+    const allByQuery = batches.map(b => b.status === "fulfilled" ? b.value : []);
+    const maxLen = Math.max(...allByQuery.map(b => b.length));
     const all = [];
-    for (const batch of batches) {
-      for (const item of batch) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          all.push(item);
+    for (let i = 0; i < maxLen; i++) {
+      for (const batch of allByQuery) {
+        if (batch[i] && !seen.has(batch[i].id)) {
+          seen.add(batch[i].id);
+          all.push(batch[i]);
         }
       }
     }
 
-    // Shufflear levemente (intercalar de cada query) y limitar a 48
-    const results = all.slice(0, 48);
-
+    const results = all.slice(0, 160);
     const stats = calcStats(results);
 
+    // Agregar score
+    const scored = results.map(r => ({ ...r, score: calcScore(r, stats?.avg_usd) }));
+
     const response = new Response(
-      JSON.stringify({ results, stats, blue_rate: blueRate, featured: true }),
+      JSON.stringify({ results: scored, stats, blue_rate: blueRate, featured: true }),
       { headers: corsHeaders() }
     );
 
